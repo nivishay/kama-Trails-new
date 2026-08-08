@@ -14,9 +14,22 @@
 >    (after v1 works) — but every route/slug decision made *before* then must not
 >    paint us into a corner. See `DECISIONS.md` #3 and #28. When choosing a route,
 >    ask: "does this map cleanly to the old URL, or need a redirect?"
+>
+> **Reference sources — what we're aiming at (keep these close):**
+> - **POC (design/UX target):** base44 POC — URL in `meetings_docs/POC.txt`
+>   (`https://kama-trail-book.base44.app/`). Match its flows, pages, and UX.
+> - **Old live site (SEO cutover target):** `https://kamatrails.co.il` — full
+>   URL/content map scraped in `meetings_docs/scrape_old.txt`. Mirror its URL
+>   structure so the final domain cutover preserves search ranking.
 
 Goal: clean, clear, tested, modular code. Tech-agnostic until stack is chosen
 (then add a short "Stack & Tooling" line: language, test runner, linter, formatter).
+
+**Stack & Tooling:** TypeScript · Next.js 16 (App Router, `src/`, alias `@/*`) ·
+Tailwind CSS v4 + shadcn-style UI (`src/components/ui`) · Supabase (Postgres + Auth
++ Storage) via `@supabase/ssr` · Vitest + React Testing Library · ESLint
+(`eslint-config-next`) + Prettier. Hebrew-only RTL. Run: `npm run dev` / `build` /
+`lint` / `test`.
 
 **Clarity**
 - Descriptive names for vars/functions/files; no vague `data`/`temp`/`util`, no 1-letter names (except loop indices).
