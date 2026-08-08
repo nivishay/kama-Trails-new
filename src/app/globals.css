@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/*
+ * Kama Trails theme — mirrors the base44 POC: a light site with a lime-green
+ * brand accent and near-black "ink" surfaces (header, footer, hero overlays,
+ * catalog cards). Tokens are named; components never hard-code hex values.
+ */
+:root {
+  --background: #ffffff;
+  --foreground: #14181f;
+
+  --card: #ffffff;
+  --card-foreground: #14181f;
+
+  --primary: #9fcc3b; /* brand lime-green — CTAs, accents */
+  --primary-foreground: #14181f;
+  --primary-hover: #8bb82f;
+
+  --ink: #14181f; /* dark surfaces: header/footer/hero overlays/cards */
+  --ink-foreground: #f4f6f1;
+  --ink-muted: #a7ada2;
+
+  --muted: #f3f5f0;
+  --muted-foreground: #5b6156;
+
+  --border: #e5e7e1;
+  --ring: #9fcc3b;
+
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-sm: calc(var(--radius) - 0.4rem);
+
+  --font-sans: var(--font-heebo);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, Arial, sans-serif;
+}

@@ -6,11 +6,15 @@
 # Local tooling / editor
 .claude/settings.local.json
 
-# Dependencies & build output (future Next.js app)
+# Dependencies & build output
 node_modules/
 .next/
 dist/
 build/
+next-env.d.ts
+
+# Test coverage
+coverage/
 
 # OS cruft
 .DS_Store
