@@ -1,0 +1,17 @@
+# Secrets & environment
+.env
+.env.*
+!.env.example
+
+# Local tooling / editor
+.claude/settings.local.json
+
+# Dependencies & build output (future Next.js app)
+node_modules/
+.next/
+dist/
+build/
+
+# OS cruft
+.DS_Store
+Thumbs.db
