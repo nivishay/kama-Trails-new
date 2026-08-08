@@ -1,5 +1,20 @@
 # Kama Trails — Coding Rules
 
+> **⭐ NORTH STAR (read first — applies to every agent).**
+> 1. **The base44 POC is what we follow.** It is the product/design reference we aim
+>    for right now — match its flows, pages, and UX. It is *not* the codebase
+>    (we build custom Next.js + Supabase); it *is* the target.
+> 2. **Protect the SEO of the live site.** At the **end** of the project we cut over to
+>    the **existing domain `https://kamatrails.co.il`** to preserve its search ranking.
+>    So keep the **real Kama site URLs close**: mirror the old URL structure (Hebrew
+>    slugs like `/אודות/`, `/trails-in-north/`, `/comming-soon-trails/`, …) or keep a
+>    1:1 redirect map, so migration is a clean cutover with no lost link equity.
+>    The old site's full URL/content map is in `meetings_docs/scrape_old.txt`.
+> 3. **Sequencing:** SEO + URL migration + domain cutover is the **FINAL phase**
+>    (after v1 works) — but every route/slug decision made *before* then must not
+>    paint us into a corner. See `DECISIONS.md` #3 and #28. When choosing a route,
+>    ask: "does this map cleanly to the old URL, or need a redirect?"
+
 Goal: clean, clear, tested, modular code. Tech-agnostic until stack is chosen
 (then add a short "Stack & Tooling" line: language, test runner, linter, formatter).
 

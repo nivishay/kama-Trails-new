@@ -10,7 +10,15 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
 2. **v1 scope ("Version One"):** The site working like the POC + **real payment** = a
    complete closed booking flow (browse → pick departure → register → pay → confirmed),
    plus the **Admin Dashboard**. Marketing pages as in the POC are included.
-3. **Sequencing:** **SEO + URL migration + domain cutover is the FINAL phase**, after v1 works.
+3. **Sequencing & SEO north star:** **SEO + URL migration + domain cutover is the FINAL phase**,
+   after v1 works. The end state is cutting over to the **existing live domain
+   `https://kamatrails.co.il`** to **preserve its search ranking** — so we treat its SEO as an
+   asset to protect, not rebuild. Practical rule for all earlier phases: **keep the real Kama
+   site URLs close** — mirror the old URL structure (Hebrew slugs: `/אודות/`, `/trails-in-north/`,
+   `/trails-in-south/`, `/trails-in-center/`, `/comming-soon-trails/`, `/contact/`, …) or maintain
+   a 1:1 old→new redirect map, so the cutover is clean with no lost link equity. Old-site URL &
+   content map: `meetings_docs/scrape_old.txt`. Don't lock in route/slug choices that would break
+   this later (relates to #28: `trail_images` + alt text arrive with the SEO phase).
 4. **Primary journey:** Self-serve public booking (as in the POC). The full concierge
    CRM funnel + WhatsApp/email automations (from the funnel doc) is a **later phase**, not v1.
 5. **External services behind interfaces:** payment (and later WhatsApp/email) are isolated
