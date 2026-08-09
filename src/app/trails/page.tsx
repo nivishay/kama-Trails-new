@@ -6,6 +6,15 @@ import { PageHero } from "@/components/layout/page-hero";
 import { CatalogGrid } from "@/components/catalog/catalog-grid";
 import type { TrailCardItem } from "@/components/catalog/trail-card";
 
+// Catalog data changes rarely; serve statically and regenerate in the
+// background (ISR) so visitors get a cached page instead of a fresh
+// dynamic render + DB round-trips on every request. A short window keeps
+// availability near-fresh; the booking flow re-checks the DB at reservation
+// time, so a briefly stale card can never cause an overbooking. When booking
+// ships, call `revalidatePath("/trails")` on booking events for instant
+// freshness.
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "הטיולים שלנו",
   description:

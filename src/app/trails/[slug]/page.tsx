@@ -3,12 +3,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { getDeparturesForTrail, getTrailBySlug } from "@/lib/catalog";
+import { getDeparturesForTrail, getTrailBySlug, getTrails } from "@/lib/catalog";
 import { isPastDate } from "@/lib/format/date";
 import { DIFFICULTY_DOT_CLASS } from "@/lib/catalog/difficulty";
 import { TrailQuickFacts } from "@/components/catalog/trail-quick-facts";
 import { DepartureList } from "@/components/catalog/departure-list";
 import { cn } from "@/lib/utils";
+
+// See /trails: ISR-cache the detail page instead of rendering dynamically per
+// request. Availability shown here re-checks the DB at booking time, so a
+// briefly stale departure list is display-only, never an overbooking risk.
+export const revalidate = 60;
+
+/** Prerender every trail's detail page at build time so no visitor pays a
+ * cold dynamic render; new slugs added later render on first request, then
+ * cache per `revalidate`. */
+export async function generateStaticParams() {
+  const trails = await getTrails();
+  return trails.map((trail) => ({ slug: trail.slug }));
+}
 
 export async function generateMetadata({
   params,

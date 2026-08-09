@@ -9,6 +9,10 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:stop": "supabase stop",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -38,6 +42,7 @@
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "supabase": "^2.113.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
