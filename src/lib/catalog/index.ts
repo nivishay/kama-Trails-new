@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
 import type { DepartureAvailability, Region, Trail } from "./types";
 
 // supabase-js can't infer row types from a runtime column string (we don't
@@ -13,7 +13,7 @@ const TRAIL_COLUMNS =
 
 /** Fetch all trails, optionally filtered by region, ordered for display. */
 export async function getTrails(region?: Region): Promise<Trail[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   let query = supabase
     .from("trails")
     .select(TRAIL_COLUMNS)
@@ -32,7 +32,7 @@ export async function getTrails(region?: Region): Promise<Trail[]> {
 
 /** Fetch a single trail by its slug, or null if not found. */
 export async function getTrailBySlug(slug: string): Promise<Trail | null> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("trails")
     .select(TRAIL_COLUMNS)
@@ -53,7 +53,7 @@ export async function getTrailBySlug(slug: string): Promise<Trail | null> {
 export async function getDeparturesForTrail(
   trailId?: string,
 ): Promise<DepartureAvailability[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase.rpc("list_availability", {
     p_trail_id: trailId ?? null,
   });

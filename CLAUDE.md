@@ -22,6 +22,14 @@
 >   URL/content map scraped in `meetings_docs/scrape_old.txt`. Mirror its URL
 >   structure so the final domain cutover preserves search ranking.
 
+**Pre-launch checklist (rule).** Whenever you defer anything to the real launch —
+a temporary shortcut, a dev-only setting that's wrong for production, a manual step,
+a `// TODO before ship`, or a check that only matters live — **record it in
+[`docs/pre-launch-checklist.md`](docs/pre-launch-checklist.md)** under the right
+section, linking the file:line and PR. That file is the single accumulating list of
+what must be verified before shipping to `kamatrails.co.il`; nothing launch-blocking
+should live only in a code comment or memory.
+
 Goal: clean, clear, tested, modular code. Tech-agnostic until stack is chosen
 (then add a short "Stack & Tooling" line: language, test runner, linter, formatter).
 
