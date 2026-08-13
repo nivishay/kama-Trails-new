@@ -53,9 +53,21 @@ export default async function AdminDashboardPage() {
   const stats = await getAdminStats();
 
   const tiles: Stat[] = [
-    { label: "יציאות קרובות", value: stats.upcomingDepartures, icon: CalendarDays },
-    { label: "הזמנות מאושרות", value: stats.confirmedBookings, icon: CheckCircle2 },
-    { label: "משתתפים מאושרים", value: stats.confirmedParticipants, icon: Users },
+    {
+      label: "יציאות קרובות",
+      value: stats.upcomingDepartures,
+      icon: CalendarDays,
+    },
+    {
+      label: "הזמנות מאושרות",
+      value: stats.confirmedBookings,
+      icon: CheckCircle2,
+    },
+    {
+      label: "משתתפים מאושרים",
+      value: stats.confirmedParticipants,
+      icon: Users,
+    },
     { label: "פניות חדשות", value: stats.newLeads, icon: Inbox },
   ];
 

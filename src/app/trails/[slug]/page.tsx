@@ -3,7 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { getDeparturesForTrail, getTrailBySlug, getTrails } from "@/lib/catalog";
+import {
+  getDeparturesForTrail,
+  getTrailBySlug,
+  getTrails,
+} from "@/lib/catalog";
 import { isPastDate } from "@/lib/format/date";
 import { DIFFICULTY_DOT_CLASS } from "@/lib/catalog/difficulty";
 import { TrailQuickFacts } from "@/components/catalog/trail-quick-facts";

@@ -11,12 +11,14 @@ import {
 import { formatPrice } from "@/lib/format/price";
 import { Button } from "@/components/ui/button";
 
-const STATUS_STYLES: Record<DepartureStatus, { label: string; className: string }> =
-  {
-    open: { label: "פתוח", className: "bg-primary/15 text-primary" },
-    closed: { label: "סגור", className: "bg-muted text-muted-foreground" },
-    cancelled: { label: "מבוטל", className: "bg-red-100 text-red-700" },
-  };
+const STATUS_STYLES: Record<
+  DepartureStatus,
+  { label: string; className: string }
+> = {
+  open: { label: "פתוח", className: "bg-primary/15 text-primary" },
+  closed: { label: "סגור", className: "bg-muted text-muted-foreground" },
+  cancelled: { label: "מבוטל", className: "bg-red-100 text-red-700" },
+};
 
 function StatusBadge({ status }: { status: DepartureStatus }) {
   const style = STATUS_STYLES[status];
