@@ -68,14 +68,73 @@ export async function createDeparture({
 }
 
 /** A valid book_trip call over the anon (public) path. */
-export function book(departureId: string, participants = 1) {
+export function book(departureId: string, participants = 1, acceptedTerms = true) {
   return anon.rpc('book_trip', {
     p_departure_id: departureId,
     p_registrant_name: 'בודק',
     p_phone: '050-0000000',
     p_email: 'test@example.com',
     p_participants_count: participants,
+    p_accepted_terms: acceptedTerms,
   });
+}
+
+/**
+ * Record a succeeded payment and confirm the booking, as the Cardcom webhook does.
+ * Uses the service_role client — the RPC is not granted to anon/authenticated (#41).
+ */
+export function recordPaymentAndConfirm(
+  bookingId: string,
+  providerRef: string,
+  amount: number,
+  options: { provider?: string; documentNumber?: number; documentUrl?: string } = {},
+) {
+  return admin.rpc('record_payment_and_confirm', {
+    p_booking_id: bookingId,
+    p_provider_ref: providerRef,
+    p_amount: amount,
+    p_provider: options.provider ?? 'cardcom',
+    p_document_number: options.documentNumber ?? null,
+    p_document_url: options.documentUrl ?? null,
+  });
+}
+
+/** Attach a Cardcom session id to a held booking over the anon (public) path. */
+export function attachPaymentSession(
+  bookingId: string,
+  accessToken: string,
+  sessionId: string,
+) {
+  return anon.rpc('attach_payment_session', {
+    p_booking_id: bookingId,
+    p_access_token: accessToken,
+    p_session_id: sessionId,
+  });
+}
+
+/** Read a booking through the public token RPC (what the return pages call). */
+export function getBookingByToken(accessToken: string) {
+  return anon.rpc('get_booking_by_token', { p_access_token: accessToken });
+}
+
+/** Read the payments ledger rows for a booking (service_role; RLS-exempt). */
+export async function getPayments(bookingId: string) {
+  const { data, error } = await admin
+    .from('payments')
+    .select('*')
+    .eq('booking_id', bookingId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`getPayments failed: ${error.message}`);
+  return data;
+}
+
+/** Force a held booking into the expired state (simulates a lapsed hold). */
+export async function markExpired(bookingId: string): Promise<void> {
+  const { error } = await admin
+    .from('bookings')
+    .update({ status: 'expired', hold_expires_at: new Date(Date.now() - 60_000).toISOString() })
+    .eq('id', bookingId);
+  if (error) throw new Error(`markExpired failed: ${error.message}`);
 }
 
 export function freeSpots(departureId: string) {
