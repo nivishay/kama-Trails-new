@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Clock, ShieldCheck, Users } from "lucide-react";
 import type { DepartureAvailability } from "@/lib/catalog/types";
 import {
@@ -46,15 +47,17 @@ function DepartureRow({ departure }: { departure: DepartureAvailability }) {
             {formatPrice(departure.price)}
           </div>
         </div>
-        {/* Registration lands in the booking increment; disabled for now. */}
-        <Button
-          variant="primary"
-          size="sm"
-          disabled
-          title={bookable ? "בקרוב" : undefined}
-        >
-          {bookable ? "הרשמה לתאריך זה" : spotsLabel(departure)}
-        </Button>
+        {bookable ? (
+          <Button variant="primary" size="sm" asChild>
+            <Link href={`/checkout?departure=${departure.id}`}>
+              הרשמה לתאריך זה
+            </Link>
+          </Button>
+        ) : (
+          <Button variant="primary" size="sm" disabled>
+            {spotsLabel(departure)}
+          </Button>
+        )}
       </div>
     </li>
   );

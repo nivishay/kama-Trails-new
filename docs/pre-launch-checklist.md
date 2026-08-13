@@ -26,10 +26,60 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   up to 60s. Overbooking is already impossible (the reservation path re-checks the DB
   at booking time) — this is a freshness/UX item, not a safety one.
   _Deferred in PR: ISR caching for the trails catalog._
-- [ ] Verify the seat-hold expiry (~15 min, DECISIONS #6) actually releases holds and
+- [x] Fix the hardcoded `15 minutes` hold in `book_trip` to the `HOLD_MINUTES` constant
+  (`= Cardcom session + buffer`, strictly greater — DECISIONS #44). _Done: `book_trip` now
+  uses `HOLD_MINUTES = 40` (migration `20260813120000_cardcom_payment_confirm.sql`)._ The
+  **value 40 is provisional** — still gated on confirming Cardcom's real session timeout (see
+  the "Confirm Cardcom's hosted-page session timeout" item below); adjust the constant there.
+- [ ] Verify the seat-hold expiry (`HOLD_MINUTES`, DECISIONS #44) actually releases holds and
   frees capacity in production (cron/edge function scheduled and running).
-- [ ] End-to-end test a real deposit payment against the **live** payment provider
-  (not sandbox) before opening booking to the public.
+- [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
+  sandbox terminal `1000`) before opening booking to the public.
+
+## Cardcom payment provider (DECISIONS #34–#40)
+
+- [ ] **Swap sandbox → production Cardcom credentials** in Vercel env: real terminal
+  number + API user/password (replacing test terminal `1000` / `Cardcomtest26`). Never
+  commit; verify not in the client bundle.
+- [ ] **Confirm the auto-issued Cardcom document is a legal חשבונית מס/קבלה** (Cardcom told the
+  client receipts are automatic — verify it's the tax document, not just a payment-confirmation
+  email), carries business name + VAT details, and is addressed + emailed to the customer
+  (DECISIONS #36). Confirm the `LowProfile/Create` call passes customer name/email + line
+  description so the document is addressed correctly. If it's not a valid tax document, fall back
+  to Green Invoice/iCount. _Built: `createCheckout` passes a `Document` block with
+  `DocumentTypeToCreate: "TaxInvoiceAndReceipt"` + customer name/email + line description._
+- [ ] **Confirm the `Document` block does not double-issue** a receipt: if Stav's terminal is
+  configured to auto-issue a document per charge AND we pass `DocumentTypeToCreate`, the customer
+  could get two documents. Verify against the live terminal; if it auto-issues, drop the explicit
+  `DocumentTypeToCreate` (keep name/email so it's still addressed) — `src/lib/payments/cardcom/cardcom-provider.ts` (DECISIONS #36).
+- [ ] **Bump `TERMS_VERSION`** (currently `'2026-08-13'` in `book_trip`) if the cancellation-policy
+  (#13) text changes before launch — it stamps which policy version each customer agreed to (DECISIONS #31).
+- [ ] **Confirm Cardcom's hosted-page session timeout** and set the seat-hold length to
+  `session + buffer` (DECISIONS #32/#39; the ~30 min default is a guess until confirmed).
+- [ ] **Set `NEXT_PUBLIC_SITE_URL`** to the live origin (`https://kamatrails.co.il`) in Vercel —
+  the checkout builds the Cardcom `SuccessRedirectUrl`/`FailedRedirectUrl`/`WebHookUrl` from it
+  (`src/lib/site-url.ts`). Defaults to `http://localhost:3000` in dev.
+- [ ] **`WebHookUrl` reachable in production** (public Vercel URL) and
+  `SuccessRedirectUrl`/`FailedRedirectUrl` point at the live domain. The webhook —
+  verified via `GetLpResult` — is the only thing that confirms a booking (DECISIONS #37).
+- [ ] **Create the `/cancellation-policy` page** with the real #13 fee-tier content — the
+  checkout consent (`src/app/checkout/checkout-form.tsx`) links "מדיניות הביטולים" to it; the
+  route does not exist yet (DECISIONS #31). Also fix the stale policy blurb in
+  `src/components/catalog/departure-list.tsx` to match #13.
+- [ ] **End-to-end sandbox payment** once `NEXT_PUBLIC_SITE_URL` is a public URL: the webhook
+  can't reach `localhost`, so the checkout→webhook→confirmed loop is only fully exercisable
+  against a deployed preview (test card in DECISIONS #29).
+- [ ] Verify webhook **idempotency** under Cardcom retries in production (the
+  `UNIQUE(provider, provider_ref)` on `payments` must make a retry a no-op, DECISIONS #38).
+- [ ] **`PAYMENT_PROVIDER=fake` must be unset (and inert) in production.** The CI flow test
+  uses a `FakePaymentProvider` that confirms bookings without a real charge (ADR 0003); it is
+  gated on `NODE_ENV !== "production"`, but confirm the prod env has no `PAYMENT_PROVIDER=fake`
+  and that a prod build ignores it — `src/lib/payments/index.ts`.
+- [ ] **Arm the Lane 2 sandbox e2e** (`.github/workflows/*` — real Cardcom sandbox against a
+  deployed public preview) once a preview deployment with a reachable `WebHookUrl` exists: add
+  the `schedule:` cron and the sandbox creds as CI secrets. It ships as a manual
+  `workflow_dispatch` job until then (ADR 0003; pairs with the "End-to-end sandbox payment"
+  item above).
 
 ## SEO & domain cutover (FINAL phase — see DECISIONS #3, #28)
 
