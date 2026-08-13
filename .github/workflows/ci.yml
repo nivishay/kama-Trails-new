@@ -31,6 +31,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # Next generates the global route types (PageProps/LayoutProps) into .next/types; a clean
+      # checkout has none, so standalone `tsc` fails without this. `typegen` needs no full build.
+      - run: npx next typegen
       - run: npx tsc --noEmit
 
   small:
