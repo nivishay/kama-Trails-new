@@ -4,10 +4,37 @@ import { ChevronRight, Clock } from "lucide-react";
 import {
   getBookingsForDeparture,
   getDepartureHeader,
+  type BookingPayment,
 } from "@/lib/admin/bookings";
 import { formatHebrewWeekday, formatTrailDate } from "@/lib/format/date";
 import { formatPrice } from "@/lib/format/price";
 import { BookingStatusBadge } from "../booking-status-badge";
+
+/** Paid state + receipt link + the "paid but not confirmed" anomaly flag (#43). */
+function PaymentCell({ payment }: { payment: BookingPayment }) {
+  if (!payment.paid) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  return (
+    <div className="flex flex-col gap-0.5">
+      {payment.anomaly ? (
+        <span className="font-medium text-destructive">שולם ללא אישור</span>
+      ) : (
+        <span className="font-medium text-primary">שולם</span>
+      )}
+      {payment.receiptUrl && (
+        <a
+          href={payment.receiptUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-primary hover:underline"
+        >
+          קבלה{payment.receiptNumber ? ` #${payment.receiptNumber}` : ""}
+        </a>
+      )}
+    </div>
+  );
+}
 
 const DATETIME_FORMAT = new Intl.DateTimeFormat("he-IL", {
   dateStyle: "short",
@@ -47,7 +74,8 @@ export default async function DepartureBookingsPage({
           <h1 className="text-2xl font-bold text-ink">{header.trail_name}</h1>
           <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
             <span>
-              {formatTrailDate(header.date)} · {formatHebrewWeekday(header.date)}
+              {formatTrailDate(header.date)} ·{" "}
+              {formatHebrewWeekday(header.date)}
             </span>
             {header.departure_time && (
               <span className="flex items-center gap-1">
@@ -77,6 +105,7 @@ export default async function DepartureBookingsPage({
                 <th className={HEAD}>משתתפים</th>
                 <th className={HEAD}>סכום</th>
                 <th className={HEAD}>סטטוס</th>
+                <th className={HEAD}>תשלום</th>
                 <th className={HEAD}>נרשם</th>
               </tr>
             </thead>
@@ -112,7 +141,12 @@ export default async function DepartureBookingsPage({
                   <td className={CELL}>
                     <BookingStatusBadge status={booking.status} />
                   </td>
-                  <td className={`${CELL} whitespace-nowrap text-muted-foreground`}>
+                  <td className={CELL}>
+                    <PaymentCell payment={booking.payment} />
+                  </td>
+                  <td
+                    className={`${CELL} whitespace-nowrap text-muted-foreground`}
+                  >
                     {DATETIME_FORMAT.format(new Date(booking.created_at))}
                   </td>
                 </tr>
