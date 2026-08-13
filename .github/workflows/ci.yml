@@ -1,0 +1,126 @@
+name: CI
+
+# The test ladder (see ADR 0003): cheap checks + unit tests gate first; if they pass, the
+# Supabase-backed db and flow jobs run in parallel, each booting its own local stack.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  checks:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      # Next generates the global route types (PageProps/LayoutProps) into .next/types; a clean
+      # checkout has none, so standalone `tsc` fails without this. `typegen` needs no full build.
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+
+  small:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  db:
+    name: DB integration tests
+    runs-on: ubuntu-latest
+    needs: [checks, small]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Start local Supabase
+        run: npx supabase start
+      - name: Export Supabase connection for the test suite
+        run: |
+          eval "$(npx supabase status -o env)"
+          if [ -z "$API_URL" ] || [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
+            echo "::error::supabase status did not yield API_URL/ANON_KEY/SERVICE_ROLE_KEY"; exit 1
+          fi
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "ANON_KEY=$ANON_KEY"
+            echo "SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+      - name: Run integration tests
+        run: npm run test:integration
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop
+
+  flow:
+    name: Flow (e2e) smoke
+    runs-on: ubuntu-latest
+    needs: [checks, small]
+    env:
+      # The fake payment provider makes the booking happy-path deterministic (ADR 0003). No
+      # VERCEL_ENV here, so the fake is active even though `next build` runs in production mode.
+      PAYMENT_PROVIDER: fake
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Start local Supabase
+        run: npx supabase start
+      - name: Export Supabase connection for the app
+        run: |
+          eval "$(npx supabase status -o env)"
+          if [ -z "$API_URL" ] || [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
+            echo "::error::supabase status did not yield API_URL/ANON_KEY/SERVICE_ROLE_KEY"; exit 1
+          fi
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_SECRET_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+      - name: Build the app
+        run: npm run build
+      - name: Run flow smoke
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop
