@@ -12,9 +12,13 @@ node_modules/
 dist/
 build/
 next-env.d.ts
+*.tsbuildinfo
 
-# Test coverage
+# Test coverage & e2e artifacts
 coverage/
+playwright-report/
+test-results/
+blob-report/
 
 # OS cruft
 .DS_Store

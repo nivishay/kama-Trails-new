@@ -1,0 +1,55 @@
+name: Sandbox E2E (Cardcom)
+
+# Lane 2 (ADR 0003): the REAL Cardcom sandbox against a DEPLOYED, publicly reachable preview,
+# where the confirming webhook can actually land (it cannot reach a localhost CI runner). This is
+# scaffolded and manual for now — arm the schedule + secrets once a public preview deploy exists
+# (see docs/pre-launch-checklist.md). It intentionally does NOT gate PRs: driving Cardcom's hosted
+# page over the network is too slow/flaky to block merges.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Public preview URL to test (e.g. https://<preview>.vercel.app)"
+        required: true
+  # schedule:
+  #   - cron: "0 3 * * *" # nightly — enable once base_url + sandbox secrets are configured
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox:
+    name: Cardcom sandbox e2e
+    runs-on: ubuntu-latest
+    # environment: preview   # attach the environment that holds the sandbox secrets once armed
+    env:
+      E2E_BASE_URL: ${{ github.event.inputs.base_url }}
+      # Cardcom sandbox test credentials (DECISIONS #29) — add these as repo/environment secrets
+      # when arming the lane. Terminal 1000 / Cardcomtest26; test card 4580000000000000 exp 12/30.
+      CARDCOM_TERMINAL_NUMBER: ${{ secrets.CARDCOM_SANDBOX_TERMINAL_NUMBER }}
+      CARDCOM_API_NAME: ${{ secrets.CARDCOM_SANDBOX_API_NAME }}
+      CARDCOM_API_PASSWORD: ${{ secrets.CARDCOM_SANDBOX_API_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Require a public base URL
+        run: |
+          if [ -z "$E2E_BASE_URL" ]; then
+            echo "::error::base_url is required (a publicly reachable preview deploy)."
+            exit 1
+          fi
+          echo "Would target $E2E_BASE_URL"
+      # TODO (arming, ADR 0003): author e2e/sandbox/*.spec.ts that drives Cardcom's hosted page
+      # with the sandbox test card and asserts the webhook-driven confirm on the deployed preview,
+      # then run `E2E_BASE_URL=$E2E_BASE_URL npx playwright test e2e/sandbox`. Add the sandbox
+      # secrets + uncomment the schedule. Until then this lane is a documented, manual placeholder.
+      - name: Sandbox e2e (not yet armed)
+        run: |
+          echo "Lane 2 is scaffolded but not armed — see ADR 0003 and docs/pre-launch-checklist.md."
+          echo "Needs: a public preview deploy with a reachable WebHookUrl, sandbox secrets, and e2e/sandbox specs."

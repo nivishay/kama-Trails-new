@@ -73,8 +73,9 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   `UNIQUE(provider, provider_ref)` on `payments` must make a retry a no-op, DECISIONS #38).
 - [ ] **`PAYMENT_PROVIDER=fake` must be unset (and inert) in production.** The CI flow test
   uses a `FakePaymentProvider` that confirms bookings without a real charge (ADR 0003); it is
-  gated on `NODE_ENV !== "production"`, but confirm the prod env has no `PAYMENT_PROVIDER=fake`
-  and that a prod build ignores it — `src/lib/payments/index.ts`.
+  hard-blocked on production deployments (`VERCEL_ENV === "production"` in
+  `isFakePaymentProviderEnabled`, `src/lib/payments/index.ts`), but still confirm the Vercel prod env
+  has no `PAYMENT_PROVIDER=fake` set at all — defence in depth.
 - [ ] **Arm the Lane 2 sandbox e2e** (`.github/workflows/*` — real Cardcom sandbox against a
   deployed public preview) once a preview deployment with a reachable `WebHookUrl` exists: add
   the `schedule:` cron and the sandbox creds as CI secrets. It ships as a manual

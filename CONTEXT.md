@@ -38,8 +38,9 @@ _Avoid_: Attendee, Guest, Traveler
 
 **Hold** (Seat Hold):
 A temporary reservation of a Departure's seats while a Customer completes checkout. It
-occupies capacity so seats can't be double-sold, and auto-releases (~15 min) if checkout is
-abandoned. A Booking starts as a Hold and becomes confirmed only when the Deposit is paid.
+occupies capacity so seats can't be double-sold, and auto-releases (~40 min, provisional — set to
+Cardcom's session timeout + buffer, DECISIONS #44) if checkout is abandoned. A Booking starts as a
+Hold and becomes confirmed only when the Deposit is paid.
 _Avoid_: Lock, Reservation, temporary booking
 
 **Payment**:
