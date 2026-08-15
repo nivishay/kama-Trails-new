@@ -57,3 +57,62 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, Arial, sans-serif;
 }
+
+/*
+ * Typography for rendered article bodies (sanitized HTML from the editor). We
+ * don't ship the Tailwind typography plugin, so these element rules give the
+ * allow-listed tags (see src/lib/content/sanitize-html.ts) readable spacing in
+ * RTL. Scoped to .article-body so they never leak into the app chrome.
+ */
+.article-body {
+  color: var(--muted-foreground);
+  line-height: 1.8;
+}
+.article-body h2 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.article-body h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.article-body p {
+  margin-block: 1rem;
+}
+.article-body a {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+.article-body ul,
+.article-body ol {
+  margin-block: 1rem;
+  padding-inline-start: 1.5rem;
+}
+.article-body ul {
+  list-style: disc;
+}
+.article-body ol {
+  list-style: decimal;
+}
+.article-body li {
+  margin-block: 0.35rem;
+}
+.article-body img {
+  margin-block: 1.5rem;
+  border-radius: var(--radius);
+  max-width: 100%;
+  height: auto;
+}
+.article-body blockquote {
+  margin-block: 1.5rem;
+  border-inline-start: 3px solid var(--primary);
+  padding-inline-start: 1rem;
+  color: var(--ink);
+  font-style: italic;
+}
