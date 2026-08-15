@@ -10,6 +10,12 @@ const HEBREW_WEEKDAY = new Intl.DateTimeFormat("he-IL", {
   timeZone: "UTC",
 });
 
+const HEBREW_LONG_DATE = new Intl.DateTimeFormat("he-IL", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
 /** Parse "YYYY-MM-DD" into a UTC Date. Throws on malformed input. */
 function parseIsoDate(iso: string): Date {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
@@ -32,6 +38,15 @@ export function formatTrailDate(iso: string): string {
 /** "2026-08-20" → "יום חמישי". */
 export function formatHebrewWeekday(iso: string): string {
   return HEBREW_WEEKDAY.format(parseIsoDate(iso));
+}
+
+/**
+ * A full timestamp (e.g. an article's `published_at`) → "20 באוגוסט 2026".
+ * Formats by the timestamp's calendar day; used for editorial dates, not the
+ * timezone-sensitive catalog dates above.
+ */
+export function formatPublishedDate(timestamp: string): string {
+  return HEBREW_LONG_DATE.format(new Date(timestamp));
 }
 
 /** Local calendar date of `now` as "YYYY-MM-DD". */
