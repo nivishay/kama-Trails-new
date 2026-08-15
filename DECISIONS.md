@@ -297,6 +297,54 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
       `status='confirmed'`** (the webhook drives the real transition, #37); `FailedRedirectUrl` offers
       retry; **both `noindex`** (never part of the SEO cutover, cf. #33).
 
+## Leads capture & concierge funnel (2026-08-15 grilling)
+
+46. **Buy-before-build — prefer an existing product over code we own.** When a need is already met by a
+    service we use or can adopt, use *that* rather than building it. Extends #5 (external services behind
+    interfaces) from "make providers pluggable" to "don't build what you can rent." Applied: Cardcom issues
+    receipts (#36) — no invoicing code; leads are chatted in **WhatsApp / Meta Business Suite Inbox** — no
+    chat UI; Facebook/Instagram lead capture **pulls from Meta** — no re-built form. **The limit — source
+    of truth:** an off-the-shelf product wins only when it doesn't fragment the hub (#48). Rule when a "just
+    use product X" idea comes up: does X cover the need *without* splitting the source of truth? If yes, use
+    it; if it would create a second place leads live, pull *from* it into the hub instead.
+
+47. **Leads capture is built to its FINAL state now — supersedes the "funnel is a later phase" clause of
+    #4/#18.** No throwaway v1 for lead handling: we build the concierge funnel's first stage (capture +
+    immediate WhatsApp auto-reply) directly. This reverses only the *sequencing* of #4/#18 for the
+    lead-capture stage; the later funnel stages (quote reminders, prep alerts, post-trip) remain unbuilt.
+
+48. **Leads architecture = one hub, rented conversations, owned pipeline.**
+    - **Supabase `leads` = the single source of truth / hub.** *Every* channel flows **in** — website form
+      (now), Facebook/Instagram lead-ads + inbound WhatsApp (later) — never out to a second store.
+    - **Conversations (2-way chat, FB+IG+WhatsApp) = Meta Business Suite Inbox** — rented, free, already
+      Stav's daily tool. We build no chat UI.
+    - **Pipeline over the booking domain = our `/admin` inbox** (the one thing Meta can't do — it ties a
+      Lead to Departures/Bookings). Its "open conversation" button deep-links to Meta Suite.
+
+49. **WhatsApp channel = Cloud API *direct* (no BSP, no Twilio).** The number **+972 53-484-4874 ("שבילי
+    קמה")** is on the WhatsApp Cloud API (WhatsApp Manager: Connected, quality High), owned in-house under
+    Stav's Meta Business account (no agency). Resolves the WhatsApp-access open question. The auto-reply is a
+    **single in-app Cloud API call** from the capture server action (same pattern as Cardcom's `actions.ts`)
+    — **not Make.** Make stays reconsidered only for the *time-delayed* funnel automations (2h SLA, 24/48h
+    reminders); the orchestration open question (#4-era) remains open for those.
+
+50. **First build slice = form → hub → WhatsApp auto-reply.** `/contact` form → `submitContactForm` server
+    action → `submit_lead` (Supabase) → Cloud API sends an approved template to the customer. Consequences:
+    - **Fields:** name + WhatsApp phone + email **required**; message **optional**.
+    - **Migration:** `leads.phone` → `not null`; `leads.message` → nullable; `submit_lead` requires phone,
+      validates email + Israeli **mobile**, normalizes to E.164 (`05X…` → `9725X…`); add a **`source`**
+      column (first slice writes `'contact_form'`, so Facebook ingest slots in later — closes the
+      glossary/schema gap where CONTEXT.md's Lead already names a *source* the table lacked).
+    - **Consent:** a WhatsApp opt-in line on the form ("בשליחת הטופס אני מאשר/ת יצירת קשר בוואטסאפ").
+    - **Capture-always, send-best-effort:** the lead is always stored; the *paid* WhatsApp fires only for a
+      valid mobile, and a send failure is logged but never loses the lead (it still lands in the inbox).
+
+51. **Public-form abuse gate (best practice, free tiers).** Because each submit now *spends money and
+    messages a real phone*, the form is gated to protect both the wallet and the number's WhatsApp quality
+    rating: **Cloudflare Turnstile** (invisible bot check) + **honeypot** + **Upstash Ratelimit**
+    (per-IP/per-phone) + **`libphonenumber-js`** valid-mobile-only send guard. Note: hand-rolled rate-limit
+    is broken on Vercel serverless (no shared memory) → Upstash, or Vercel WAF on Pro.
+
 ## Open questions
 
 - [x] **Receipts/invoices (חשבונית מס/קבלה): RESOLVED → Cardcom issues them** (see #36). Supersedes the
@@ -305,13 +353,16 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
       automatic document is the **legal חשבונית מס/קבלה** with our business/VAT details, **addressed +
       emailed to the customer** — not just a payment-confirmation email. If it turns out not to be a valid
       tax document, fall back to Green Invoice/iCount as a later, separate integration.
-- [ ] WhatsApp Business API access route (Meta Cloud API direct vs provider like 360dialog/Twilio) + sender number approval.
-- [ ] **Automations orchestration — in-app vs Make (Integromat)?** For a **later dedicated grill**: when we
-      build automations (transactional #12 + funnel #4), do we code them in-app behind a `MessagingProvider`
-      seam, or orchestrate them as external workflows via **Make.com** (client is considering it) / n8n /
-      Zapier? Plus: map each trigger → message → channel. **Blocked meanwhile** on the triggers (booking
-      confirmed = payment) and channels (WhatsApp/email) that are currently deferred. Current build focus is
-      the **Admin Dashboard (#10) + single-owner auth (#11)**, which is fully unblocked.
+- [x] **WhatsApp API access route: RESOLVED → Cloud API direct** (see #49). Number +972 53-484-4874
+      ("שבילי קמה") is Connected on the WhatsApp Cloud API, in-house under Stav's Meta Business account —
+      **no BSP, no Twilio**. Remaining setup (not a decision): author + submit the auto-reply template for
+      Meta approval, and generate the credentials (see the pre-launch token item).
+- [ ] **Automations orchestration — in-app vs Make (Integromat)? NARROWED (see #49).** Settled: the
+      *lead-capture auto-reply* is **in-app** (a single Cloud API call, no orchestrator). Still open **only**
+      for the *time-delayed / multi-step* funnel automations (2h no-response SLA, 24h/48h quote reminders,
+      prep alerts): code them in-app behind a `MessagingProvider` seam with a scheduler (Supabase
+      `pg_cron`/Vercel Cron), or orchestrate via **Make.com** (client is considering it) / n8n. Decide when
+      those timers are built; map each trigger → message → channel then.
 - [ ] **Admin password recovery not wired** — admin login is password-only; there is no recovery/callback
       route, and Supabase's recovery email redirects to the Site URL with a token the app can't handle
       (surfaced 2026-08-09 during live login verification). Fine for a single owner in v1 (set/reset the
