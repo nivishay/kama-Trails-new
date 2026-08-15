@@ -156,21 +156,7 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
     increment. **Open fact to confirm:** the chosen provider's hosted-page session timeout (sets the
     hold length; default 30 min until confirmed from the provider's docs — Cardcom's is ~30 min).
 
-33. **Payment vendor = Grow (משולם); build sandbox-first behind `PaymentProvider`, Stav's account is a
-    later credentials swap.** Resolves #29's "vendor still open": we commit to **Grow** as the build
-    target. Grow's test→live delta is only the **base host** (`sandbox.meshulam.co.il` →
-    `secure.meshulam.co.il`) + **credentials** (`userId` + `pageCode` + `apiKey`) — flow and fields are
-    identical — so cutover is a **Vercel env swap, no flow change** (fulfils #29). Two facts shape the
-    build: Grow has **no public sandbox** (sandbox `userId`/`pageCode` are issued **per business by Grow
-    support**), and **Stav has not opened a Grow account yet**. So we build **fake-provider-first**:
-    define the `PaymentProvider` interface + a `FakeProvider` mimicking Grow's exact contract (redirect
-    to hosted page → **server-to-server webhook** → `confirm_registration`, `held → confirmed`) and
-    build/test the whole booking→pay→confirm flow with **zero external dependency**. `GrowProvider` is
-    one class added when sandbox creds arrive; Stav's live account is then env credentials only. **Two
-    swap-points, both pure config:** (fake → Grow) and (Grow sandbox → Stav live). Supersedes **Cardcom**
-    as the sandbox reference in #29 (Cardcom is no longer used).
-
-34. **Admin Dashboard (#10) build plan — UI + auth wiring over the *existing* RLS admin model.** The
+33. **Admin Dashboard (#10) build plan — UI + auth wiring over the *existing* RLS admin model.** The
     authz layer is already deployed in the baseline schema: `profiles.role='admin'` + `is_admin()` +
     admin RLS on `trails`/`departures`/`bookings`/`leads`/`profiles`, plus the `submit_lead` ingest RPC.
     So the dashboard adds **no new authz DB design** — it wires a session onto what exists. Locked:
@@ -195,14 +181,130 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
       (Stav's operational core); (3) Manage Trails (content CRUD + images); (4) **Leads inbox** — and wire
       the contact form to `submit_lead` (it's "coming soon" today, so the inbox stays empty until then).
 
+## Cardcom integration decisions (2026-08-13 grilling) — see [ADR 0002](./docs/adr/0002-cardcom-confirmation-model.md)
+
+34. **Payment provider = Cardcom.** Resolves the open vendor in #29. Still built behind the
+    `PaymentProvider` interface (#5); go-live remains a credentials swap, and a later switch is one
+    more class. What #29 locked (hosted redirect page + server-to-server webhook) is unchanged — this
+    only fills in the vendor and the Cardcom-specific design below.
+
+35. **Cardcom API generation = v11 REST `LowProfile/Create`.** JSON in/out; amounts in **shekels**
+    (matches our `numeric` `total_amount`/`deposit_amount` — no agorot conversion). We set the amount
+    in the Create call and **the customer cannot change it** on the hosted page, so the charged amount
+    is trustworthy by construction. (Legacy form-encoded `Interface/LowProfile.aspx` in agorot is
+    rejected.)
+
+36. **Receipts (חשבונית מס/קבלה) = Cardcom issues them**, folded into the `LowProfile/Create` call via
+    the **`Document` block** — Cardcom auto-issues the חשבונית מס/קבלה and emails it to the customer.
+    **Supersedes the earlier "let Grow issue receipts" lean** (that reasoning was vendor-specific;
+    vendor is now Cardcom). No separate invoicing integration in v1 (no Green Invoice/iCount). We may
+    store the returned `DocumentInfo` ref (`DocumentNumber`/`DocumentUrl`) for the admin view.
+    **Dependency (pre-launch, account/client knowledge):** Stav's Cardcom terminal must have the
+    documents/invoicing module enabled (may be a paid add-on) + business/VAT details set.
+    **Update (2026-08-13):** Cardcom confirmed to the client that receipts are issued/sent
+    **automatically**. Remaining verify (narrowed): that the automatic document is the **legal
+    חשבונית מס/קבלה** (not merely a payment-confirmation email), carries our business/VAT details, and is
+    **addressed + emailed to the customer**. Build consequence: if the *terminal* auto-issues per charge,
+    we may not need to *trigger* the document, but the `LowProfile/Create` call still passes the
+    **customer name + email + a line description** ("השתתפות בטיול …") so the receipt is addressed and
+    delivered to the right customer.
+
+37. **Confirmation model = webhook-confirms-only + pull-verify** (the security-critical rule). The
+    server-to-server webhook (Cardcom → our `WebHookUrl`) is the **only** thing that flips
+    `held → confirmed`. The browser `SuccessRedirectUrl` page **never mutates state** — it only
+    *displays*, polling the booking by `access_token` until it reads `confirmed`. Because Cardcom does
+    **not** sign its webhook, we **do not trust the POST body**: on receipt we call
+    **`GetLpResult(LowProfileId)`** and treat *that* response as the source of truth. Before confirming
+    we verify **`ResponseCode` success + returned amount (`TranzactionInfo.Amount`) == booking
+    `deposit_amount` + our terminal**. (The amount check is a secondary guard — see #35 — it catches a
+    config/currency mistake.) Reliable-by-design with #32: a payment can only succeed while the seat is
+    still held, so "paid but no seat" can't occur.
+
+38. **Correlation & idempotency.** The Create call carries **`ReturnValue = booking.id`**; Cardcom
+    echoes it back on the webhook + result, which is how we find the booking. **`provider_ref` =
+    Cardcom `TranzactionId`**. Add a **`UNIQUE(provider, provider_ref)` on `payments`** so webhook
+    retries are harmless no-ops (the ledger *is* the "have we processed this charge?" record).
+    `LowProfileId` identifies the payment session (stored to re-fetch/verify).
+
+39. **Atomic confirm RPC = `record_payment_and_confirm(booking_id, provider_ref, amount)`.** In **one
+    DB transaction**: insert one `payments` row (`kind='deposit'`, `status='succeeded'`, `provider_ref`;
+    idempotent via the #38 unique index) **and** update `bookings` `held → confirmed`. Replaces the
+    loose "insert payment *then* call `confirm_registration`" for the paid path — the **money truth**
+    (payments) and the **reservation truth** (`status`) commit together and cannot drift.
+    `confirm_registration` is retained only for a possible manual/admin confirm path. Named generically
+    (not `..._deposit_...`) because in v1 the confirming payment is the **full** amount, not a deposit.
+
+40. **Full payment in v1; deposit deferred to a later version** (reaffirms #30). To close a booking the
+    customer pays the **FULL amount** — no partial deposit and no balance-collection flow in v1.
+    Internally the confirming payment is still recorded as **`kind='deposit'`** meaning *"the amount
+    required to confirm"* (= total in v1); the **customer never sees the word "deposit"** — checkout
+    copy is **"תשלום מלא"**. Introducing a real deposit later = set `DEPOSIT_PERCENT < 100` + build the
+    balance screen, with **no schema change** (`payments.kind` + `deposit_amount` already support it).
+    _[Open, deferred: if we later prefer the stored v1 value to be neutral (`'full'`) rather than
+    `'deposit'`, that's a one-line enum choice — traded against a migration when real deposits arrive.]_
+
+41. **The confirm path is privileged; the webhook is a Next.js Route Handler with the service-role key.**
+    `record_payment_and_confirm` is `security definer` and **not granted to `anon`/`authenticated`** — if
+    the public role could call it, an attacker could confirm a booking without paying (guessed
+    `booking_id` + any `provider_ref`), which would make ADR 0002's verification pointless. So the RPC is
+    invoked **only** by the Cardcom **webhook handler**, implemented as a **Next.js Route Handler on
+    Vercel** (Node runtime, non-cached) holding the **service-role key** (server-only env, never
+    `NEXT_PUBLIC`). This does **not** violate #33: #33 forbids service-role in *user request* paths
+    (`/admin/*`); the webhook is a *system* path (Cardcom → our server, no browser/session), which is the
+    correct place for a scoped elevated credential — it makes "verified-webhook-only" the single way a
+    booking can confirm. Chosen over a Supabase Edge Function to keep one deploy target / env store and
+    because the handler already makes the outbound `GetLpResult` call. See [ADR 0002](./docs/adr/0002-cardcom-confirmation-model.md).
+
+42. **The v1 ledger records only *succeeded* payments — no `pending` row at checkout-start.** A `held`
+    booking already means "payment attempt in flight," so a `pending` payments row would duplicate that
+    signal in a second place (the "two truths" drift we're avoiding). The `payments` ledger stays what
+    ADR 0001 says — a record of *actual money movements*: an abandoned checkout leaves an `expired`
+    booking and **no** payment row (nothing to reconcile/GC). Correlation needs no pending row
+    (`ReturnValue = booking.id` + `GetLpResult`, #37/#38). Consequence: `payments.status` values
+    `'pending'`/`'failed'` are **unused in v1** — kept in the enum for the future (retries, balance flow),
+    not manufactured.
+
+43. **`record_payment_and_confirm` behavior by booking state (the #32 backstop, made concrete).** The RPC
+    **always records the payment idempotently** (`UNIQUE(provider, provider_ref)`), and:
+    - `held` → insert payment + flip `held → confirmed` (the normal path).
+    - already `confirmed` (webhook retry / Cardcom double-fire) → the unique index rejects the duplicate;
+      **idempotent no-op**.
+    - `expired` / `cancelled` (the rare "paid but no seat" #32 designs out) → **record the payment but do
+      NOT change status**, and **flag it as an anomaly for the admin** ("paid but not confirmed"), resolved
+      via the manual refund flow (#15). Never silently drop a real charge; never force-confirm (would
+      oversell or revive an admin-cancelled booking). **No** automatic capacity-recheck/re-confirm — the
+      30-min+ hold makes this case rare enough that a cheap safe backstop is correct, not a feature.
+
+44. **Seat-hold length = Cardcom session timeout + buffer (strictly greater), as a named constant.** Makes
+    #32's `hold = session + buffer` concrete and **supersedes the "~15 min" figures in #6/#21 and the
+    hardcoded `15 minutes` in `book_trip`** (a live mismatch to fix). The hold must be **strictly greater**
+    than Cardcom's hosted-page session timeout — equal timers re-open the boundary race #32 closes (a
+    payment landing as the hold expires = "paid but no seat"). `HOLD_MINUTES = Cardcom_session + buffer`;
+    with Cardcom's ~30 min (still to confirm) and a ~10 min buffer → **~40 min**. Exact value follows the
+    open question (confirm Cardcom's real session timeout); if a round 30-min hold is ever wanted, Cardcom's
+    session must be pinned ≤ ~20 so a buffer still exists.
+
+45. **Accepted build defaults for checkout-start + return** (follow-through on locked decisions; no new
+    forks — accepted 2026-08-13):
+    - **`book_trip` grows** to set `deposit_amount = round(total_amount × DEPOSIT_PERCENT/100)` (= total in
+      v1, #30), record both mandatory consents (`accepted_terms_at = now()`, `terms_version =
+      TERMS_VERSION`, #31), then create the hold at `HOLD_MINUTES` (#44). Signature grows (migration).
+    - **`PaymentProvider` interface** (#5) in `src/lib/payments/`: `createCheckout(booking) → { redirectUrl,
+      sessionId }` and `getResult(sessionId) → verified PaymentResult` (normalized: success, amount,
+      `providerRef`, `bookingId`, document ref). `CardcomProvider` maps these to `LowProfile/Create` +
+      `GetLpResult`.
+    - **Customer return pages:** `SuccessRedirectUrl` reads the booking by `access_token` and **polls until
+      `status='confirmed'`** (the webhook drives the real transition, #37); `FailedRedirectUrl` offers
+      retry; **both `noindex`** (never part of the SEO cutover, cf. #33).
+
 ## Open questions
 
-- [~] **Receipts/invoices (חשבונית מס/קבלה):** Israel requires legal receipts. **Grow can do this
-      for us** — it auto-issues חשבונית מס / קבלה after payment and emails/SMSes it to the customer
-      (configurable, brandable, also via API). Leaning: **let Grow issue receipts**, so it stays out of
-      our build. **To confirm (account-level, client knowledge):** Stav's Grow account has the invoicing
-      module enabled (may be a paid add-on) and business/VAT details set. If not enabled, fall back to a
-      separate tool (Green Invoice/iCount) — but that's a later, separate integration, not the payment flow.
+- [x] **Receipts/invoices (חשבונית מס/קבלה): RESOLVED → Cardcom issues them** (see #36). Supersedes the
+      earlier "let Grow issue receipts" lean now the vendor is Cardcom. **Cardcom confirmed to the client
+      that receipts are sent automatically (2026-08-13).** Remaining verify (narrowed, pre-launch): the
+      automatic document is the **legal חשבונית מס/קבלה** with our business/VAT details, **addressed +
+      emailed to the customer** — not just a payment-confirmation email. If it turns out not to be a valid
+      tax document, fall back to Green Invoice/iCount as a later, separate integration.
 - [ ] WhatsApp Business API access route (Meta Cloud API direct vs provider like 360dialog/Twilio) + sender number approval.
 - [ ] **Automations orchestration — in-app vs Make (Integromat)?** For a **later dedicated grill**: when we
       build automations (transactional #12 + funnel #4), do we code them in-app behind a `MessagingProvider`
@@ -214,9 +316,9 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
       route, and Supabase's recovery email redirects to the Site URL with a token the app can't handle
       (surfaced 2026-08-09 during live login verification). Fine for a single owner in v1 (set/reset the
       password via the Supabase dashboard / Admin API). Wire a proper reset flow if more admins are added.
-- [ ] **Provider hosted-page session timeout** — sets the seat-hold length (#32: `hold = session + buffer`).
-      Confirm from the chosen provider's docs once the vendor is picked; default 30 min until known
-      (Cardcom's is ~30 min).
+- [ ] **Cardcom hosted-page session timeout** — sets the seat-hold length (#32: `hold = session + buffer`).
+      Vendor is now Cardcom (#34); confirm the exact value from Cardcom's terminal config / docs. Default
+      ~30 min until confirmed.
 
 ## Deferred to a later phase (schema stays ready for these)
 
@@ -232,10 +334,10 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
 
 - **Gift Cards** — explicitly dropped. Not built or referenced in v1.
 
-- [ ] **Payment provider / merchant account** — STILL OPEN between **Cardcom / HYP / Grow** (see #29).
-      Approach is resolved (sandbox-first behind the `PaymentProvider` interface; Cardcom used as the
-      sandbox reference because it's free/public), but the **vendor is not chosen** — it depends on which
-      merchant account the client opens, plus fees and receipt/invoice support. Client knowledge.
+- [x] **Payment provider / merchant account — RESOLVED → Cardcom** (see #34–#40). Built behind the
+      `PaymentProvider` interface (#5); go-live is a credentials swap. Remaining client/account facts to
+      confirm are tracked in the pre-launch checklist (invoicing module, production terminal + API creds,
+      session timeout).
 - [x] Deposit mechanics — RESOLVED for v1 (see #30): charge 100% via `DEPOSIT_PERCENT`; no balance
       flow in v1. Still client knowledge for later: the real deposit % and when/how balance is collected.
 - [ ] Admin Dashboard scope for v1 (CRUD trails/departures, manage bookings, refunds, exports?) + admin auth.

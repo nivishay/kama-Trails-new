@@ -46,7 +46,10 @@ export default function AdminLoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="email" className="block text-sm font-medium text-ink">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-ink"
+            >
               אימייל
             </label>
             <input
