@@ -82,6 +82,24 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   `workflow_dispatch` job until then (ADR 0003; pairs with the "End-to-end sandbox payment"
   item above).
 
+## Articles (rich-text content) — WIP, see PR #21
+
+- [ ] **Apply the articles migration** (`supabase/migrations/20260815120000_articles.sql`) to cloud —
+  and to local dev — it is **not applied to any DB yet**, so the articles feature is non-functional
+  until it is. Hand-apply via MCP like the other migrations.
+- [ ] **Verify the `sanitize-html` allowlist blocks XSS** before rendering article HTML on any public
+  page (`src/lib/content/sanitize-html.ts`). Article bodies are authored HTML shown to visitors — the
+  sanitizer is the XSS boundary (CLAUDE.md: sanitize anything shown to users). Confirm no
+  `<script>` / event-handler / `javascript:` URL survives and the allowed tags/attrs are intentional.
+- [ ] **Confirm RLS on the `articles` table** — public can read published articles only; writes are
+  admin-only (run `schema-checker` after the migration is applied).
+- [ ] **Finish the feature** — this branch was captured mid-development: confirm the admin authoring
+  flow, public routes + per-article SEO metadata (Hebrew slugs, DECISIONS #3), and empty/draft states
+  before shipping.
+- [ ] **Rebase `feat/articles` onto `main` before merge** — it was cut ~4 commits behind `main`
+  (PR #21). GitHub reports no conflict, but `package.json` / `src/app/globals.css` /
+  `src/lib/format/date.ts` overlap the mainline, so reconcile them deliberately.
+
 ## SEO & domain cutover (FINAL phase — see DECISIONS #3, #28)
 
 - [ ] URL structure mirrors the old site or a 1:1 redirect map is in place
