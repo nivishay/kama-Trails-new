@@ -90,6 +90,14 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] Per-page metadata (title/description) and canonical URLs on every public route.
 - [ ] Trail images have alt text (`trail_images` + alt, DECISIONS #28).
 - [ ] Redirects verified for every old URL before DNS cutover to `kamatrails.co.il`.
+- [ ] **Trail `slug`s are English placeholders, not the Hebrew SEO slugs.** The 5 seeded
+  trails use slugs like `mitzpe-dalton`/`nahal-qumran`; the north star wants the old
+  site's Hebrew URL slugs (map in the [[trip-photos-storage-layout]] memory /
+  `meetings_docs/scrape_old.txt`). Decide slug-rename vs. redirect map before cutover.
+  _Issue #19 (feat/trail-photos-from-storage): photos wired, slugs left as-is._
+- [ ] **Seed the other 10 trails.** Only 5 of the 15 trails exist as rows; their photo
+  folders are already in `trip_photos` but have no trail (name/region/price/description/
+  hero+gallery) yet. Wire them the same way as the first 5 (issue #19).
 
 ## Performance
 
@@ -104,6 +112,10 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   intended and write nothing it shouldn't.
 - [ ] No secrets in the repo or client bundle; production env vars set in the host.
 - [ ] Customer PII (name/phone/email) is stored/logged only where needed.
+- [ ] **`trip_photos` bucket is now public** (issue #19,
+  `supabase/migrations/20260816120000_public_trip_photos_bucket.sql`) — every object,
+  including the `trip_photos/_legacy/` parked files, is publicly readable. Confirm nothing
+  sensitive sits in that bucket before launch (it holds only trail/marketing photos today).
 
 ## Operational readiness
 

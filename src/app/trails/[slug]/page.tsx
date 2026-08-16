@@ -11,6 +11,7 @@ import {
 import { isPastDate } from "@/lib/format/date";
 import { DIFFICULTY_DOT_CLASS } from "@/lib/catalog/difficulty";
 import { TrailQuickFacts } from "@/components/catalog/trail-quick-facts";
+import { TrailGallery } from "@/components/catalog/trail-gallery";
 import { DepartureList } from "@/components/catalog/departure-list";
 import { cn } from "@/lib/utils";
 
@@ -119,6 +120,7 @@ export default async function TrailDetailPage({
           <TrailSection title="ציוד נדרש" body={trail.gear} />
           <TrailSection title="רמת קושי ולמי מתאים" body={trail.audience} />
           <TrailSection title="מה כלול במחיר" body={trail.included} />
+          <TrailGallery images={trail.gallery} trailName={trail.name} />
         </div>
 
         <aside className="lg:sticky lg:top-20 lg:self-start">

@@ -1,4 +1,5 @@
 import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { withResolvedPhotos } from "./photos";
 import type {
   DepartureAvailability,
   DepartureStatus,
@@ -32,7 +33,7 @@ export async function getTrails(region?: Region): Promise<Trail[]> {
   if (error) {
     throw new Error(`Failed to load trails: ${error.message}`);
   }
-  return (data ?? []) as unknown as Trail[];
+  return ((data ?? []) as unknown as Trail[]).map(withResolvedPhotos);
 }
 
 /** Fetch a single trail by its slug, or null if not found. */
@@ -47,7 +48,8 @@ export async function getTrailBySlug(slug: string): Promise<Trail | null> {
   if (error) {
     throw new Error(`Failed to load trail "${slug}": ${error.message}`);
   }
-  return (data as unknown as Trail | null) ?? null;
+  const trail = (data as unknown as Trail | null) ?? null;
+  return trail ? withResolvedPhotos(trail) : null;
 }
 
 /** A single departure with the trail context the checkout page needs to show. */
