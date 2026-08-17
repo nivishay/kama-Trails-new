@@ -3,6 +3,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { PageHero } from "@/components/layout/page-hero";
 import { SocialLinks } from "@/components/layout/social-links";
 import { CONTACT } from "@/lib/site";
+import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = { title: "צור קשר" };
 
@@ -34,9 +35,12 @@ export default function ContactPage() {
           </li>
         </ul>
         <SocialLinks className="mt-6 text-ink" />
-        <p className="mt-10 text-muted-foreground">
-          טופס יצירת קשר יעלה בקרוב.
-        </p>
+        <div className="mt-10 border-t border-border pt-10">
+          <h2 className="mb-4 text-xl font-semibold text-ink">
+            השאירו פרטים ונחזור אליכם
+          </h2>
+          <ContactForm />
+        </div>
       </div>
     </div>
   );

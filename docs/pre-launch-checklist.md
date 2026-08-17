@@ -116,6 +116,23 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   `workflow_dispatch` job until then (ADR 0003; pairs with the "End-to-end sandbox payment"
   item above).
 
+## Leads capture & WhatsApp (DECISIONS #46–#51)
+
+- [ ] **Replace the dev/personal WhatsApp token with a business-owned System-User token** before launch.
+  Building/testing may use a token Niv generates via his Full access on the WhatsApp asset, but **Niv's
+  portfolio access expires 9 Nov 2026** — if prod creds are tied to his membership, the auto-reply silently
+  dies that day. Create a **System User** (portfolio-admin action — likely Stav) with
+  `whatsapp_business_messaging` + `whatsapp_business_management`, assigned to the "שבילי קמה" WhatsApp
+  account, and use that permanent token in prod env (DECISIONS #49).
+- [ ] **Get the auto-reply message template approved by Meta** — the long pole (approval has lead time);
+  no automated WhatsApp can send without it. Author the Hebrew copy and submit early (DECISIONS #50).
+- [ ] **Set production secrets in Vercel env (never committed):** WhatsApp Cloud API token + Phone number ID,
+  Cloudflare Turnstile site+secret keys, Upstash Redis URL+token (DECISIONS #50/#51). Verify none reach the
+  client bundle.
+- [ ] **Verify capture-always / send-best-effort in production:** a failed/blocked WhatsApp send (invalid
+  number, API error, quota) must still leave the lead in the inbox — never a lost lead (DECISIONS #50).
+- [ ] **Confirm the form's WhatsApp opt-in consent line** is present and its wording is final (DECISIONS #50).
+
 ## SEO & domain cutover (FINAL phase — see DECISIONS #3, #28)
 
 - [ ] URL structure mirrors the old site or a 1:1 redirect map is in place
