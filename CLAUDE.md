@@ -69,6 +69,27 @@ Tailwind CSS v4 + shadcn-style UI (`src/components/ui`) · Supabase (Postgres + 
 - Arrange–Act–Assert, one behavior per test, behavior-named. Deterministic & independent (mock net/time/state).
 - Test behavior, not implementation.
 
+**CI coverage (rule).** When you build & test a piece that's *worth guarding in CI*,
+make sure a GitHub Action actually runs its tests — **extend the existing ladder in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml)** (see ADR 0003), don't fork
+one-off workflow files.
+- *Worth a GHA when* the piece has automated tests that a teammate could break from
+  an unrelated change: a new **test level or runner** (a `test:*` npm script no job
+  runs yet), a new **external dependency** the suite needs (DB, browser, service,
+  secret/env), or a **critical flow** (booking, payments, auth) whose regression must
+  block merge. A pure refactor already covered by an existing job needs nothing new.
+- *Best practice for the job:* pin actions to a major (`@v4`) and Node to `NODE_VERSION`;
+  `npm ci` (never `install`) with `cache: npm`; put cheap gates (`lint`, `tsc`, unit)
+  first and gate the expensive DB/e2e jobs behind them via `needs:`; keep it
+  **deterministic** (fake/seed external providers — e.g. `PAYMENT_PROVIDER: fake` —
+  pin time/random, no live network); `permissions:` least-privilege and secrets via
+  `secrets.*`, never inline; tear down services with `if: always()` and upload
+  artifacts (Playwright report, logs) `if: failure()` for triage; keep the job fast and
+  cancel superseded runs (`concurrency:` + `cancel-in-progress`).
+- If a piece *should* be covered but you're deferring the CI wiring, log it in
+  [`docs/pre-launch-checklist.md`](docs/pre-launch-checklist.md) rather than leaving it
+  silent.
+
 **Hygiene**
 - Match surrounding code style. Linter/formatter are the source of truth (pass before commit).
 - Remove dead code/unused imports. Small focused commits explaining the *why*.
