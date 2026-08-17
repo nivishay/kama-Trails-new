@@ -10,7 +10,9 @@ import {
 } from "@/lib/catalog";
 import { isPastDate } from "@/lib/format/date";
 import { DIFFICULTY_DOT_CLASS } from "@/lib/catalog/difficulty";
+import { trailImageUrl } from "@/lib/catalog/trail-image";
 import { TrailQuickFacts } from "@/components/catalog/trail-quick-facts";
+import { TrailGallery } from "@/components/catalog/trail-gallery";
 import { DepartureList } from "@/components/catalog/departure-list";
 import { cn } from "@/lib/utils";
 
@@ -69,12 +71,14 @@ export default async function TrailDetailPage({
     (departure) => !isPastDate(departure.date),
   );
 
+  const heroUrl = trailImageUrl(trail.hero_image);
+
   return (
     <div>
       <section className="relative flex min-h-[420px] items-end overflow-hidden text-ink-foreground">
-        {trail.hero_image && (
+        {heroUrl && (
           <Image
-            src={trail.hero_image}
+            src={heroUrl}
             alt={trail.name}
             fill
             sizes="100vw"
@@ -119,6 +123,7 @@ export default async function TrailDetailPage({
           <TrailSection title="ציוד נדרש" body={trail.gear} />
           <TrailSection title="רמת קושי ולמי מתאים" body={trail.audience} />
           <TrailSection title="מה כלול במחיר" body={trail.included} />
+          <TrailGallery images={trail.gallery} trailName={trail.name} />
         </div>
 
         <aside className="lg:sticky lg:top-20 lg:self-start">

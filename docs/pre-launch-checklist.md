@@ -36,6 +36,40 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
 
+## Tokenization payment model (ADR 0004 / DECISIONS #46–#52) — supersedes charge-at-checkout
+
+- [ ] **Scheduled Charge job provisioned & running in production** — runs the stored Token at
+  `max(departure − 14 days, now)` (#47). This is the money-collection path; if the cron/edge
+  function isn't scheduled and monitored, **no one gets charged**. (Pairs with the existing
+  hold-expiry cron item above.)
+- [ ] **Failed-charge automation verified in production** (#49): token auto-retries → customer
+  pay-now link (immediate charge, inside 14d) → admin alert → **auto-release after ~2 days** if
+  unpaid, with admin notified. Confirm the ~2-day timer actually releases the seat and frees capacity.
+- [ ] **Registration call is tokenize-only; the `Document` (receipt) block moved onto the Charge
+  call** (#48) — verify the customer gets a **booking-confirmation** at registration (no receipt)
+  and the **חשבונית מס/קבלה only when the Charge runs**. Confirm registration copy does **not** say
+  "we saved your card" (Cardcom holds it; we hold only the Token).
+- [ ] **Confirm Cardcom supports the tokenize-then-charge-later flow** on Stav's terminal (token/
+  recurring-charge capability enabled; may be an account setting/add-on).
+- [ ] **Under-min pre-charge escalation fires before D−14** (≈D−21, #52) so Stav can cancel in the
+  free "before-charge" zone; verify timings (Stav-defined) and that cancel-trip auto-refunds the
+  already-charged bookings (#50).
+- [ ] **Confirm the Cardcom refund/זיכוי fee** (§1, e.g. ~10₪) and, if any, disclose it in the
+  customer cancellation message.
+
+## Marketing consent & customer data (DECISIONS #55–#56) — legal
+
+- [ ] **Imported customers default opted-OUT** and are excluded from the Newsletter audience; only
+  explicit opt-in is marketable (Israeli anti-spam / חוק הספאם). Have Ran legal-review the opt-in
+  flow + copy before any marketing send.
+- [ ] **Newsletter tool syncs consent both ways** — export only opted-in; an unsubscribe in the tool
+  writes back opt-out (#55/#57).
+
+## WhatsApp / automations (DECISIONS #57)
+
+- [ ] **Meta-approved WhatsApp templates** for every transactional message before launch (Niv drafts,
+  Stav finalizes wording) + sender-number approval + API access route chosen.
+
 ## Cardcom payment provider (DECISIONS #34–#40)
 
 - [ ] **Swap sandbox → production Cardcom credentials** in Vercel env: real terminal

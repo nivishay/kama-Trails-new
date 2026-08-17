@@ -1,0 +1,419 @@
+<title>שבילי הקמה — תרשים הזרימה של המערכת</title>
+<style>
+  :root {
+    --ground: #f6f5f0;
+    --surface: #ffffff;
+    --surface-2: #efeee7;
+    --ink: #201f1a;
+    --muted: #5f5c52;
+    --faint: #8a877c;
+    --border: #e3e1d7;
+    --line: #c8c6ba;
+    --primary: #2f6b40;
+    --primary-ink: #234f30;
+    --primary-soft: #e6efe6;
+
+    --msg: #0d838c;      --msg-soft: #e2f0f1;
+    --charge: #9a6c08;   --charge-soft: #f5ecd6;
+    --alert: #c2681b;    --alert-soft: #f8e9da;
+    --you: #7a4bb0;      --you-soft: #f0e8f8;
+    --auto: #2c7d4d;     --auto-soft: #e3f0e7;
+    --stop: #c0433a;     --stop-soft: #f8e5e3;
+
+    --radius: 16px;
+    --maxw: 900px;
+    --font: "Segoe UI", "Arial", "Helvetica Neue", "Rubik", "Assistant", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:#14150f; --surface:#1c1e17; --surface-2:#24261d; --ink:#eceadf; --muted:#b0ad9f; --faint:#86836f;
+      --border:#33362a; --line:#43473760; --line:#454a3a; --primary:#74bd88; --primary-ink:#a6d7b3; --primary-soft:#223528;
+      --msg:#49c1c9; --msg-soft:#123033; --charge:#dfae44; --charge-soft:#32280f; --alert:#e59657; --alert-soft:#331f10;
+      --you:#b58ce2; --you-soft:#271a33; --auto:#63c088; --auto-soft:#183024; --stop:#ea8177; --stop-soft:#331b19;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#f6f5f0; --surface:#fff; --surface-2:#efeee7; --ink:#201f1a; --muted:#5f5c52; --faint:#8a877c; --border:#e3e1d7; --line:#c8c6ba;
+    --primary:#2f6b40; --primary-ink:#234f30; --primary-soft:#e6efe6;
+    --msg:#0d838c; --msg-soft:#e2f0f1; --charge:#9a6c08; --charge-soft:#f5ecd6; --alert:#c2681b; --alert-soft:#f8e9da;
+    --you:#7a4bb0; --you-soft:#f0e8f8; --auto:#2c7d4d; --auto-soft:#e3f0e7; --stop:#c0433a; --stop-soft:#f8e5e3;
+  }
+  :root[data-theme="dark"] {
+    --ground:#14150f; --surface:#1c1e17; --surface-2:#24261d; --ink:#eceadf; --muted:#b0ad9f; --faint:#86836f; --border:#33362a; --line:#454a3a;
+    --primary:#74bd88; --primary-ink:#a6d7b3; --primary-soft:#223528;
+    --msg:#49c1c9; --msg-soft:#123033; --charge:#dfae44; --charge-soft:#32280f; --alert:#e59657; --alert-soft:#331f10;
+    --you:#b58ce2; --you-soft:#271a33; --auto:#63c088; --auto-soft:#183024; --stop:#ea8177; --stop-soft:#331b19;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; direction: rtl; text-align: right; background: var(--ground); color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px 90px; }
+  b, strong { font-weight: 700; }
+
+  header { background: linear-gradient(180deg, var(--primary-soft), var(--ground)); border-bottom: 1px solid var(--border); }
+  .header-inner { max-width: var(--maxw); margin: 0 auto; padding: 46px 22px 32px; }
+  .kicker { color: var(--primary-ink); font-weight: 700; font-size: 15px; margin: 0 0 10px; }
+  h1 { font-size: clamp(27px, 5vw, 38px); line-height: 1.15; margin: 0 0 14px; font-weight: 800; letter-spacing: -.01em; text-wrap: balance; }
+  .intro { font-size: 18px; color: var(--muted); margin: 0; max-width: 60ch; }
+  .altdoc { margin-top: 16px; font-size: 14.5px; color: var(--faint); }
+  .altdoc a { color: var(--primary-ink); font-weight: 600; }
+
+  .explain { margin: 26px 0 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; }
+  .explain h2 { margin: 0 0 8px; font-size: 20px; }
+  .explain p { margin: 0 0 10px; color: var(--muted); }
+  .explain p:last-child { margin-bottom: 0; }
+  .explain .hl { color: var(--ink); font-weight: 700; background: var(--charge-soft); padding: 1px 6px; border-radius: 6px; }
+
+  .legend { margin: 22px 0 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 22px; }
+  .legend h3 { margin: 0 0 12px; font-size: 14px; color: var(--faint); font-weight: 700; }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 9px 14px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+  .tag { display: inline-block; font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .t-msg { color: var(--msg); background: var(--msg-soft); }
+  .t-charge { color: var(--charge); background: var(--charge-soft); }
+  .t-alert { color: var(--alert); background: var(--alert-soft); }
+  .t-you { color: var(--you); background: var(--you-soft); }
+  .t-auto { color: var(--auto); background: var(--auto-soft); }
+  .t-stop { color: var(--stop); background: var(--stop-soft); }
+
+  /* diagram section */
+  .sec-title { display: flex; align-items: center; gap: 12px; margin: 44px 0 6px; }
+  .sec-title h2 { font-size: 23px; margin: 0; font-weight: 800; letter-spacing: -.01em; }
+  .sec-title .tick { width: 6px; height: 25px; border-radius: 4px; background: var(--primary); flex: none; }
+  .sec-lead { color: var(--muted); margin: 0 0 18px; font-size: 15.5px; }
+
+  .diagram { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 30px 16px; overflow-x: auto; }
+
+  /* flowchart primitives */
+  .fc { display: flex; flex-direction: column; align-items: center; min-width: min-content; }
+  .node { position: relative; width: fit-content; max-width: 460px; padding: 12px 20px; border-radius: 13px; border: 1px solid var(--border); border-top: 4px solid var(--hue, var(--primary)); background: var(--surface); font-weight: 650; font-size: 15.5px; line-height: 1.42; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+  .node .tag { margin-bottom: 7px; }
+  .node .sub { display: block; font-weight: 500; font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .node.n-msg    { --hue: var(--msg); }
+  .node.n-charge { --hue: var(--charge); background: color-mix(in srgb, var(--charge-soft) 55%, var(--surface)); }
+  .node.n-alert  { --hue: var(--alert); background: color-mix(in srgb, var(--alert-soft) 55%, var(--surface)); }
+  .node.n-you    { --hue: var(--you); background: color-mix(in srgb, var(--you-soft) 55%, var(--surface)); }
+  .node.n-auto   { --hue: var(--auto); }
+  .node.n-stop   { --hue: var(--stop); background: color-mix(in srgb, var(--stop-soft) 60%, var(--surface)); }
+  .node.n-good   { --hue: var(--auto); background: color-mix(in srgb, var(--auto-soft) 60%, var(--surface)); }
+  .node.n-start  { --hue: var(--primary); background: var(--primary-soft); border-radius: 999px; font-weight: 750; border-top-width: 1px; border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); padding: 11px 24px; }
+
+  /* connectors */
+  .arrow { width: 2px; height: 30px; background: var(--line); position: relative; flex: none; }
+  .arrow::after { content: ""; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid var(--line); }
+  .arrow .cap { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+
+  /* decision diamond */
+  .decision { width: 230px; min-height: 132px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 30px; background: var(--charge-soft); border: 2px solid var(--charge); color: var(--charge); font-weight: 800; font-size: 15.5px; line-height: 1.3; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); flex: none; }
+
+  /* branches */
+  .fork { position: relative; margin-top: 18px; width: 100%; display: flex; justify-content: center; }
+  .fork::before { content: ""; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); width: 2px; height: 18px; background: var(--line); }
+  .branches { position: relative; display: flex; justify-content: space-evenly; align-items: flex-start; gap: 26px; flex-wrap: wrap; padding-top: 0; }
+  .branches::before { content: ""; position: absolute; top: 0; left: 14%; right: 14%; height: 2px; background: var(--line); }
+  .branch { position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 18px; flex: 0 1 auto; }
+  .branch::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 18px; background: var(--line); }
+  .blabel { font-size: 13.5px; font-weight: 800; padding: 4px 13px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .blabel.good { color: var(--auto); background: var(--auto-soft); border-color: color-mix(in srgb, var(--auto) 30%, transparent); }
+  .blabel.warn { color: var(--charge); background: var(--charge-soft); border-color: color-mix(in srgb, var(--charge) 30%, transparent); }
+  .blabel.stop { color: var(--stop); background: var(--stop-soft); border-color: color-mix(in srgb, var(--stop) 30%, transparent); }
+  .blabel .s { display: block; font-weight: 600; font-size: 11.5px; opacity: .8; margin-top: 1px; }
+
+  .diag-note { margin-top: 14px; font-size: 14px; color: var(--muted); background: var(--charge-soft); border-radius: 12px; padding: 11px 16px; }
+  .diag-note b { color: var(--ink); }
+
+  /* summary box */
+  .whenyou { background: var(--primary-soft); border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border)); border-radius: var(--radius); padding: 22px 24px; margin-top: 44px; }
+  .whenyou h3 { margin: 0 0 12px; font-size: 19px; color: var(--primary-ink); }
+  .whenyou .two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 620px) { .whenyou .two { grid-template-columns: 1fr; } }
+  .whenyou h4 { margin: 0 0 8px; font-size: 15px; }
+  .whenyou ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .whenyou li { position: relative; padding-right: 18px; font-size: 15px; color: var(--muted); }
+  .whenyou li::before { content: "•"; position: absolute; right: 0; color: var(--primary); font-weight: 800; }
+
+  .note { margin-top: 16px; font-size: 14.5px; color: var(--muted); background: var(--charge-soft); border-radius: 12px; padding: 12px 16px; }
+  .note b { color: var(--ink); }
+
+  footer { margin-top: 54px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 13.5px; }
+  a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
+</style>
+
+<header>
+  <div class="header-inner">
+    <p class="kicker">שבילי הקמה · המדריך לסתיו</p>
+    <h1>תרשים הזרימה — איך המערכת עובדת בפועל</h1>
+    <p class="intro">
+      תרשימים שמראים כל שלב וכל התפצלות: מה קורה אוטומטית, מתי הכסף יורד, מתי <b>אתה</b> מקבל התראה,
+      ומה קורה בכל מקרה קצה — חיוב שנכשל, ביטולים והחזרים, סגירה או ביטול של טיול.
+    </p>
+    <p class="altdoc">גרסה טכנית מפורטת (למפתחים): <a href="./automation-flow-trees.html">automation-flow-trees.html</a></p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- payment model explainer -->
+  <div class="explain">
+    <h2>קודם כול — איך עובד התשלום</h2>
+    <p>הלקוח נרשם ומזין את פרטי כרטיס האשראי כרגיל, אבל <span class="hl">הכרטיס לא מחויב באותו רגע</span> וגם לא נתפסת לו מסגרת.</p>
+    <p>חברת הסליקה (קארדקום) שומרת את הכרטיס אצלה בצורה מאובטחת ומחזירה לנו "קוד" מוצפן. אנחנו לא שומרים את פרטי הכרטיס — רק את הקוד.</p>
+    <p><span class="hl">בערך שבועיים לפני הטיול</span> המערכת מבצעת את החיוב המלא אוטומטית ושולחת קבלה. זו הנקודה היחידה שבה הכסף באמת יורד.</p>
+  </div>
+
+  <!-- legend -->
+  <div class="legend">
+    <h3>מקרא — צבע התיבה מסמן מה קורה בה</h3>
+    <div class="legend-row">
+      <div class="legend-item"><span class="tag t-auto">אוטומטי</span> המערכת עושה לבד</div>
+      <div class="legend-item"><span class="tag t-msg">הודעה ללקוח</span> וואטסאפ / מייל</div>
+      <div class="legend-item"><span class="tag t-charge">הכסף יורד</span> חיוב בפועל</div>
+      <div class="legend-item"><span class="tag t-alert">התראה אליך</span> אתה צריך לשים לב</div>
+      <div class="legend-item"><span class="tag t-you">החלטה שלך</span> אתה לוחץ על הכפתור</div>
+      <div class="legend-item"><span class="tag t-stop">עצירה / ביטול</span> ההזמנה נסגרת</div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 1: booking journey -->
+  <div class="sec-title"><span class="tick"></span><h2>1 · מסע ההזמנה</h2></div>
+  <p class="sec-lead">מרגע שלקוח נרשם ועד שהמקום שמור לו.</p>
+  <div class="diagram">
+    <div class="fc">
+      <div class="node n-start">לקוח נרשם לטיול באתר</div>
+      <div class="arrow"></div>
+      <div class="node">מזין את פרטי הכרטיס<span class="sub">הכרטיס נשמר בצורה מאובטחת — עדיין בלי חיוב</span></div>
+      <div class="arrow"></div>
+      <div class="decision">פרטי הכרטיס נקלטו?</div>
+      <div class="fork">
+        <div class="branches">
+          <div class="branch">
+            <div class="blabel good">כן</div>
+            <div class="arrow"></div>
+            <div class="node n-msg"><span class="tag t-msg">הודעה ללקוח</span>אישור הרשמה נשלח ללקוח</div>
+            <div class="arrow"></div>
+            <div class="node n-good">המקום שמור לטיול ✓<span class="sub">ממתינים למועד החיוב</span></div>
+            <div class="arrow"><span class="cap">שבועיים לפני הטיול</span></div>
+            <div class="node n-charge"><span class="tag t-charge">הכסף יורד</span>עוברים לשלב החיוב<span class="sub">(המשך בתרשים 2)</span></div>
+          </div>
+          <div class="branch">
+            <div class="blabel stop">לא / הלקוח נטש</div>
+            <div class="arrow"></div>
+            <div class="node n-stop"><span class="tag t-stop">עצירה</span>המקום משתחרר אוטומטית<span class="sub">לא בוצע חיוב — אין מה להחזיר</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 2: the charge + failure -->
+  <div class="sec-title"><span class="tick"></span><h2>2 · החיוב — שבועיים לפני הטיול</h2></div>
+  <p class="sec-lead">כאן הכסף יורד. כולל מה קורה אם החיוב נכשל.</p>
+  <div class="diagram">
+    <div class="fc">
+      <div class="node n-start">הגיע מועד החיוב — שבועיים לפני הטיול</div>
+      <div class="arrow"></div>
+      <div class="node n-charge"><span class="tag t-charge">הכסף יורד</span>המערכת מחייבת את מלוא הסכום מהכרטיס השמור</div>
+      <div class="arrow"></div>
+      <div class="decision">החיוב עבר בהצלחה?</div>
+      <div class="fork">
+        <div class="branches">
+          <div class="branch">
+            <div class="blabel good">כן</div>
+            <div class="arrow"></div>
+            <div class="node n-msg"><span class="tag t-msg">הודעה ללקוח</span>קבלה נשלחת ללקוח אוטומטית</div>
+            <div class="arrow"></div>
+            <div class="node n-good">שולם — הטיול מאושר ✓</div>
+          </div>
+          <div class="branch">
+            <div class="blabel warn">לא</div>
+            <div class="arrow"></div>
+            <div class="node n-auto"><span class="tag t-auto">אוטומטי</span>ניסיון חיוב חוזר</div>
+            <div class="arrow"></div>
+            <div class="node n-msg"><span class="tag t-msg">הודעה ללקוח</span>נשלח ללקוח קישור לתשלום</div>
+            <div class="arrow"></div>
+            <div class="node n-alert"><span class="tag t-alert">התראה אליך</span>החיוב נכשל וקישור נשלח ללקוח</div>
+            <div class="arrow"></div>
+            <div class="decision">שולם בסוף?</div>
+            <div class="fork">
+              <div class="branches">
+                <div class="branch">
+                  <div class="blabel good">כן</div>
+                  <div class="arrow"></div>
+                  <div class="node n-good">הטיול מאושר ✓</div>
+                </div>
+                <div class="branch">
+                  <div class="blabel stop">לא</div>
+                  <div class="arrow"></div>
+                  <div class="node n-stop"><span class="tag t-stop">עצירה</span>המקום מתבטל אוטומטית<span class="sub">המקרה היחיד שהמערכת מבטלת לבד</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3: refunds -->
+  <div class="sec-title"><span class="tick"></span><h2>3 · ביטולים והחזרים</h2></div>
+  <p class="sec-lead">הכלל: מה שקובע זה <b>אם הכסף כבר ירד</b> — ואז <b>מי מבטל</b>.</p>
+  <div class="diagram">
+    <div class="fc">
+      <div class="node n-start">התקבלה בקשת ביטול</div>
+      <div class="arrow"></div>
+      <div class="decision">הכסף כבר ירד?</div>
+      <div class="fork">
+        <div class="branches">
+          <div class="branch">
+            <div class="blabel good">לא <span class="s">עדיין לא חויב</span></div>
+            <div class="arrow"></div>
+            <div class="node n-good">משחררים את המקום<span class="sub">אין מה להחזיר — לא משנה מי מבטל</span></div>
+          </div>
+          <div class="branch">
+            <div class="blabel warn">כן <span class="s">כבר חויב</span></div>
+            <div class="arrow"></div>
+            <div class="decision">מי מבטל?</div>
+            <div class="fork">
+              <div class="branches">
+                <div class="branch">
+                  <div class="blabel">הלקוח</div>
+                  <div class="arrow"></div>
+                  <div class="decision">כמה זמן לפני הטיול?</div>
+                  <div class="fork">
+                    <div class="branches">
+                      <div class="branch">
+                        <div class="blabel warn">5–6 ימים</div>
+                        <div class="arrow"></div>
+                        <div class="node n-charge">החזר בניכוי<br><b>50 ₪ למשתתף</b></div>
+                      </div>
+                      <div class="branch">
+                        <div class="blabel warn">3–4 ימים</div>
+                        <div class="arrow"></div>
+                        <div class="node n-charge">החזר בניכוי<br><b>150 ₪ למשתתף</b></div>
+                      </div>
+                      <div class="branch">
+                        <div class="blabel stop">עד 48 שעות</div>
+                        <div class="arrow"></div>
+                        <div class="node n-stop"><b>אין החזר</b></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="branch">
+                  <div class="blabel good">אתה / החברה <span class="s">מזג אוויר, מתחת למינימום</span></div>
+                  <div class="arrow"></div>
+                  <div class="node n-good">החזר מלא<span class="sub">או העברה לתאריך אחר — בלי דמי ביטול</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="diag-note"><b>שים לב:</b> את סכומי דמי הביטול אתה סוגר סופית. כל ההחזרים מתבצעים <b>ידנית על ידך</b> מהפאנל — לא אוטומטית ולא על ידי הלקוח.</div>
+  </div>
+
+  <!-- DIAGRAM 4: closing vs cancelling -->
+  <div class="sec-title"><span class="tick"></span><h2>4 · סגירת הרשמה מול ביטול טיול</h2></div>
+  <p class="sec-lead">שני דברים שונים לגמרי — חשוב לא להתבלבל.</p>
+  <div class="diagram">
+    <div class="fc">
+      <div class="node n-you"><span class="tag t-you">החלטה שלך</span>ניהול טיול קיים בפאנל</div>
+      <div class="arrow"></div>
+      <div class="decision">מה עושים לטיול?</div>
+      <div class="fork">
+        <div class="branches">
+          <div class="branch">
+            <div class="blabel">סגירת הרשמה</div>
+            <div class="arrow"></div>
+            <div class="node n-auto"><span class="tag t-auto">אוטומטי</span>אי אפשר להירשם יותר<span class="sub">אבל הטיול יוצא כרגיל — למשל כשמתקרבים לשעת היציאה</span></div>
+          </div>
+          <div class="branch">
+            <div class="blabel stop">ביטול הטיול</div>
+            <div class="arrow"></div>
+            <div class="node n-good">כל הנרשמים מקבלים החזר מלא</div>
+            <div class="arrow"></div>
+            <div class="node n-msg"><span class="tag t-msg">הודעה ללקוח</span>נשלחת הודעת ביטול מנוסחת אוטומטית</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="diag-note"><b>סגירה</b> = עוצרים הרשמות בלבד, הטיול מתקיים. <b>ביטול</b> = הטיול לא מתקיים, והכסף חוזר לכולם.</div>
+  </div>
+
+  <!-- DIAGRAM 5: under minimum -->
+  <div class="sec-title"><span class="tick"></span><h2>5 · טיול שלא מגיע למינימום</h2></div>
+  <p class="sec-lead">המערכת מתריעה, אבל <b>ההחלטה לבטל תמיד שלך</b>.</p>
+  <div class="diagram">
+    <div class="fc">
+      <div class="node n-start">טיול לא הגיע למספר המשתתפים המינימלי</div>
+      <div class="arrow"></div>
+      <div class="node n-alert"><span class="tag t-alert">התראה אליך</span>התראות מדורגות<span class="sub">כשבוע לפני החיוב, ושוב אחר כך</span></div>
+      <div class="arrow"></div>
+      <div class="node n-you"><span class="tag t-you">החלטה שלך</span>לנסות לגייס עוד אנשים · להזיז תאריך · או לבטל</div>
+      <div class="arrow"></div>
+      <div class="decision">החלטת לבטל?</div>
+      <div class="fork">
+        <div class="branches">
+          <div class="branch">
+            <div class="blabel good">לא</div>
+            <div class="arrow"></div>
+            <div class="node n-good">הטיול יוצא כרגיל ✓</div>
+          </div>
+          <div class="branch">
+            <div class="blabel stop">כן</div>
+            <div class="arrow"></div>
+            <div class="decision">כבר עבר מועד החיוב?</div>
+            <div class="fork">
+              <div class="branches">
+                <div class="branch">
+                  <div class="blabel good">לא <span class="s">לפני החיוב</span></div>
+                  <div class="arrow"></div>
+                  <div class="node n-good">משחררים את כולם<span class="sub">בלי החזרים — אף אחד לא חויב</span></div>
+                </div>
+                <div class="branch">
+                  <div class="blabel warn">כן <span class="s">אחרי החיוב</span></div>
+                  <div class="arrow"></div>
+                  <div class="node n-good">החזר מלא לכל הנרשמים</div>
+                  <div class="arrow"></div>
+                  <div class="node n-msg"><span class="tag t-msg">הודעה ללקוח</span>הודעת ביטול אוטומטית</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- summary -->
+  <div class="whenyou">
+    <h3>בשורה התחתונה — מתי אתה נכנס לתמונה</h3>
+    <div class="two">
+      <div>
+        <h4>המערכת תתריע לך כאשר:</h4>
+        <ul>
+          <li>לא חזרת ללקוח חדש תוך שעתיים.</li>
+          <li>הצעת מחיר לא נענתה אחרי 48 שעות.</li>
+          <li>חיוב של לקוח נכשל.</li>
+          <li>טיול לא מגיע למינימום נרשמים.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>ההחלטות שתמיד שלך:</h4>
+        <ul>
+          <li>לבטל טיול (המערכת לא עושה זאת לבד).</li>
+          <li>לאשר החזרים כספיים.</li>
+          <li>ליצור טיול פרטי.</li>
+          <li>להזיז תאריך או לבטל הרשמה בודדת.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><b>מה שנשאר לך לסגור:</b> מספר הימים המדויק לחיוב לפני הטיול, סכומי דמי הביטול, כמה תזכורות ובאילו זמנים, ומינימום/מקסימום משתתפים לכל טיול.</div>
+
+  <footer>שבילי הקמה · מסמך פנימי · זרימת האוטומציות וההחלטות לפי סיכום פגישת 16.8.2026.</footer>
+
+</div>

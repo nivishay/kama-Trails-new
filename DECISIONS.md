@@ -297,53 +297,117 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
       `status='confirmed'`** (the webhook drives the real transition, #37); `FailedRedirectUrl` offers
       retry; **both `noindex`** (never part of the SEO cutover, cf. #33).
 
-## Leads capture & concierge funnel (2026-08-15 grilling)
+## 2026-08-16 meeting — tokenization payment model (see [ADR 0004](./docs/adr/0004-tokenize-at-registration-charge-before-departure.md))
 
-46. **Buy-before-build — prefer an existing product over code we own.** When a need is already met by a
-    service we use or can adopt, use *that* rather than building it. Extends #5 (external services behind
-    interfaces) from "make providers pluggable" to "don't build what you can rent." Applied: Cardcom issues
-    receipts (#36) — no invoicing code; leads are chatted in **WhatsApp / Meta Business Suite Inbox** — no
-    chat UI; Facebook/Instagram lead capture **pulls from Meta** — no re-built form. **The limit — source
-    of truth:** an off-the-shelf product wins only when it doesn't fragment the hub (#48). Rule when a "just
-    use product X" idea comes up: does X cover the need *without* splitting the source of truth? If yes, use
-    it; if it would create a second place leads live, pull *from* it into the hub instead.
+> The client cannot hold a credit framework > ~1 week, so v1 **decouples securing the seat from
+> collecting the money**. This **supersedes the "confirmed = paid at checkout" core** of #6, #30,
+> #32, #37, #40 and amends [ADR 0002](./docs/adr/0002-cardcom-confirmation-model.md). #7 (deposit/
+> balance) stays deferred; #44 (hold length) survives (it still only covers the tokenization redirect).
 
-47. **Leads capture is built to its FINAL state now — supersedes the "funnel is a later phase" clause of
-    #4/#18.** No throwaway v1 for lead handling: we build the concierge funnel's first stage (capture +
-    immediate WhatsApp auto-reply) directly. This reverses only the *sequencing* of #4/#18 for the
-    lead-capture stage; the later funnel stages (quote reminders, prep alerts, post-trip) remain unbuilt.
+46. **Seat is secured by TOKENIZING the card, not by paying.** Cardcom's hosted page runs a
+    **tokenize-only** op at registration; on success the Booking is **`reserved`** — seat secured,
+    capacity occupied, **no money moved**. New lifecycle: `held` → **`reserved`** (Token saved) →
+    `confirmed` (Charge succeeded) → `cancelled`/`expired`. `confirmed` **no longer means "paid at
+    checkout"** — it means "the Charge ran." Capacity is occupied from `reserved` onward. The customer
+    is "booked" at `reserved`.
 
-48. **Leads architecture = one hub, rented conversations, owned pipeline.**
-    - **Supabase `leads` = the single source of truth / hub.** *Every* channel flows **in** — website form
-      (now), Facebook/Instagram lead-ads + inbound WhatsApp (later) — never out to a second store.
-    - **Conversations (2-way chat, FB+IG+WhatsApp) = Meta Business Suite Inbox** — rented, free, already
-      Stav's daily tool. We build no chat UI.
-    - **Pipeline over the booking domain = our `/admin` inbox** (the one thing Meta can't do — it ties a
-      Lead to Departures/Bookings). Its "open conversation" button deep-links to Meta Suite.
+47. **The Charge runs at `max(departure − 14 days, now)`.** ~14 days before departure, or
+    **immediately** for a last-minute Booking made inside that window — one scheduled-charge mechanism,
+    no special-case path. 14 days is the agreed number (Stav may finalize). A successful Charge flips
+    `reserved → confirmed`.
 
-49. **WhatsApp channel = Cloud API *direct* (no BSP, no Twilio).** The number **+972 53-484-4874 ("שבילי
-    קמה")** is on the WhatsApp Cloud API (WhatsApp Manager: Connected, quality High), owned in-house under
-    Stav's Meta Business account (no agency). Resolves the WhatsApp-access open question. The auto-reply is a
-    **single in-app Cloud API call** from the capture server action (same pattern as Cardcom's `actions.ts`)
-    — **not Make.** Make stays reconsidered only for the *time-delayed* funnel automations (2h SLA, 24/48h
-    reminders); the orchestration open question (#4-era) remains open for those.
+48. **Receipt at Charge; booking-confirmation at registration.** Cardcom auto-issues the חשבונית
+    מס/קבלה (#36) only when money moves (the Charge, ~D−14) — the **`Document` block moves off the
+    registration call onto the charge call**; registration is tokenize-only. At registration the
+    customer gets a **booking confirmation** stating **when and how much** they'll be charged. **Copy
+    must NOT say "we saved your card"** — Cardcom holds the card; we hold only the Token.
 
-50. **First build slice = form → hub → WhatsApp auto-reply.** `/contact` form → `submitContactForm` server
-    action → `submit_lead` (Supabase) → Cloud API sends an approved template to the customer. Consequences:
-    - **Fields:** name + WhatsApp phone + email **required**; message **optional**.
-    - **Migration:** `leads.phone` → `not null`; `leads.message` → nullable; `submit_lead` requires phone,
-      validates email + Israeli **mobile**, normalizes to E.164 (`05X…` → `9725X…`); add a **`source`**
-      column (first slice writes `'contact_form'`, so Facebook ingest slots in later — closes the
-      glossary/schema gap where CONTEXT.md's Lead already names a *source* the table lacked).
-    - **Consent:** a WhatsApp opt-in line on the form ("בשליחת הטופס אני מאשר/ת יצירת קשר בוואטסאפ").
-    - **Capture-always, send-best-effort:** the lead is always stored; the *paid* WhatsApp fires only for a
-      valid mobile, and a send failure is logged but never loses the lead (it still lands in the inbox).
+49. **Failed-charge handling (the new failure mode).** On charge failure: (a) **auto-retry the Token**
+    a few times; (b) **notify the customer with a new pay-now link** (immediate charge — we're inside
+    14 days); (c) **notify the Admin** that retries failed and a link was sent; (d) if unpaid after
+    **~2 days**, the seat **auto-releases** and the Admin is notified. This is the **one automatic
+    cancellation path** — distinct from the admin-decided minimum-participants cancel (#9). Makes
+    `payments.status='failed'` (unused per #42) a real state.
 
-51. **Public-form abuse gate (best practice, free tiers).** Because each submit now *spends money and
-    messages a real phone*, the form is gated to protect both the wallet and the number's WhatsApp quality
-    rating: **Cloudflare Turnstile** (invisible bot check) + **honeypot** + **Upstash Ratelimit**
-    (per-IP/per-phone) + **`libphonenumber-js`** valid-mobile-only send guard. Note: hand-rolled rate-limit
-    is broken on Vercel serverless (no shared memory) → Upstash, or Vercel WAF on Pro.
+50. **Refunds are modeled off charge state, not the calendar.** Before the Charge (>14d out) any
+    cancellation is **release seat + drop Token, nothing owed**. After the Charge: **customer**-cancel
+    → refund **minus** policy fee (#13 tiers, Stav finalizes); **company**-cancel (weather / minimum /
+    force majeure) → **full** refund or free reschedule. The fee tiers govern exactly one case
+    (customer-cancels-after-charge); #13's tiers all fall inside the 14-day charged window.
+
+51. **Admin-Created Booking = one primitive, two entry points** (pulls forward the manual/phone entry
+    deferred in #10). Entry points: (a) **Private Trip** — Admin picks an existing **Trail**, sets a
+    per-person price + date + contact + participants → the system makes a **Private Departure** (not
+    listed in the public catalog, but linking to the Trail's public page) and emits a **pay-link**;
+    (b) **add a late Participant** to an existing Departure after sales closed. Both are the **same
+    Booking** with the **same lifecycle and Charge timing** as self-serve (#46/#47): a Private Trip
+    booked a month out is **tokenized now, charged at `max(D−14, now)`** — not always-immediate. Only
+    the initiator (Admin), the (admin-set) price, and catalog visibility differ. **Private-trip pricing
+    is identical to standard** — `participants × price_per_person`, admin sets the per-person number;
+    the §5 "price per extra participant" field and §6 "above 7 → surcharge" idea are **dropped** (one
+    price field, not three).
+
+52. **Minimum-participants escalation straddles the charge (amends #9).** The D−14 charge (#47) still
+    fires **automatically**; #9's "track-only, admin decides" is preserved as the **final cancel is
+    always Stav's button** (never auto-cancelled for low enrollment — the *only* auto-cancel is the
+    payment-failure path #49). What's added: a **staged escalation** when a Departure is below minimum,
+    with **at least one rung *before* the charge** — a notice ~**a week before the D−14 charge (≈D−21)**
+    so Stav can cancel while it's still in the "before charge = nothing owed, no refunds" clean zone
+    (#50), or recruit. Later rungs (meeting examples **D−7 / D−2**) are last-ditch recruiting *after*
+    the charge; cancelling then is a full refund to all (#50 company-cancel). Exact timings/frequency
+    are **Stav-defined** (provisional). If Stav does nothing at the pre-charge rung, the charge fires
+    on schedule.
+
+53. **Admin action set (resolves the #33 "[OPEN QUESTION]").** Public self-serve registration
+    **auto-closes at a per-Departure deadline defaulting to the Departure start time** (Stav can set it
+    earlier); maps onto the `open`/`closed`/`cancelled` status (#24), `closed` = public sales stopped,
+    trip still runs. **Admin actions are unbounded by that deadline** — Stav can intervene at **any**
+    stage, **including after the trip ran** (§6: weather mid-trip → cancel + refund all). The action set:
+    **edit** trail/departure fields · **open/close** registration · **cancel-trip** (bulk — cancels all
+    bookings, auto-refunds the charged ones, sends the legal cancellation message, §6/#50) ·
+    **add late Participant** (#51) · **create Private Trip** (#51) · **admin-cancel a single booking**
+    (refund per matrix #50) · **contact customer**. **Reschedule is removed for now** (see #54).
+
+54. **Drop the "v1 vs later phase" scoping frame — build the project as a whole** (2026-08-16). Earlier
+    decisions carved a minimal "Version One" (#2) with many items pushed to "a later phase" (#4 funnel/
+    automations, #12 marketing messaging, newsletter, analytics, etc.). Per the meeting, those are now
+    **in-scope build targets**, not deferred. **This does not change sequencing** — #3's north star holds:
+    **SEO + URL migration + domain cutover remain the FINAL phase** (ordering, not scope). Where older
+    decisions say "v1 only / later phase," read them as **feature descriptions**, not scope gates.
+    **Exception:** **Reschedule** (#14/#26) is explicitly **removed for now** — the one thing actively
+    deferred. (Per-participant signing, magic-link expiry, and other "schema stays ready" items remain
+    genuinely deferred where noted.)
+
+55. **First-class deduplicated Customer entity** (backbone for §2 opt-in, §8 customers view + Excel
+    import, §9 newsletter). Was a mere concept (guest checkout stored contact on the Booking, no
+    Customers table). Now **one row per person**, identity = **match-on-either phone or email, phone
+    primary** (match by normalized phone first, else email, else create); owns contact + **Marketing
+    Consent** (opt-in/out + timestamp + source) and aggregates the person's Bookings + Leads. A Customer
+    can exist with **no** Booking (imported from Stav's Excel, or Lead-only). **Guest checkout is
+    unchanged** for the person (still no login, #8) — this is backend dedup/aggregation, not an account.
+    Cross-match conflict (phone→A, email→B) resolves to the **phone** match and flags the odd email for
+    the admin (no silent auto-merge). Marketing Consent is a **separate, non-mandatory** checkout
+    checkbox (§2), distinct from the mandatory booking consents (#27/#31); only opted-in Customers may
+    be sent Newsletter/marketing.
+
+56. **Analytics + Customers view + Excel import (§8).** (a) **Google Analytics** wired into the admin
+    panel (simple/cheap; the AI-driven marketing-analysis idea is noted but not built). (b) A
+    **Customers/SBC view** — the deduplicated Customer list (#55) with per-person history (bookings,
+    leads, consent state). (c) **Excel import** of Stav's existing customers into the Customer table —
+    **imported Customers default to opted-OUT** and are **excluded from the Newsletter audience**; only
+    an **explicit opt-in** makes a Customer marketable (spam-law: a past-customer spreadsheet is not
+    consent). Imported people are visible/searchable and count as history regardless of consent.
+
+57. **Automations orchestration = split by criticality** (resolves the parked "in-app vs Make" open
+    question, now active per #54). **Transactional/operational messages run in-app** behind the
+    `MessagingProvider` seam (#12): booking confirmation, the D−14 Charge + receipt, charge-failed
+    retry/link/alert (#49), the D−21 under-min escalation (#52), seat auto-release, evening-before
+    reminder (Waze + guide phone). Rationale: money-critical, PII-carrying, must be idempotent under
+    webhook retries, reliable, and unit-testable — not suitable for a third-party low-code canvas. We
+    already own the scheduler (built for the #47 Charge job). **Marketing Newsletter (§9) runs
+    external** (MailChimp/Make): bulk send, unsubscribe, deliverability are commodity and low-risk if
+    flaky. The consent state (#55) is the source of truth and syncs out to the external tool; only
+    opted-in Customers are exported.
 
 ## Open questions
 
@@ -353,16 +417,27 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
       automatic document is the **legal חשבונית מס/קבלה** with our business/VAT details, **addressed +
       emailed to the customer** — not just a payment-confirmation email. If it turns out not to be a valid
       tax document, fall back to Green Invoice/iCount as a later, separate integration.
-- [x] **WhatsApp API access route: RESOLVED → Cloud API direct** (see #49). Number +972 53-484-4874
-      ("שבילי קמה") is Connected on the WhatsApp Cloud API, in-house under Stav's Meta Business account —
-      **no BSP, no Twilio**. Remaining setup (not a decision): author + submit the auto-reply template for
-      Meta approval, and generate the credentials (see the pre-launch token item).
-- [ ] **Automations orchestration — in-app vs Make (Integromat)? NARROWED (see #49).** Settled: the
-      *lead-capture auto-reply* is **in-app** (a single Cloud API call, no orchestrator). Still open **only**
-      for the *time-delayed / multi-step* funnel automations (2h no-response SLA, 24h/48h quote reminders,
-      prep alerts): code them in-app behind a `MessagingProvider` seam with a scheduler (Supabase
-      `pg_cron`/Vercel Cron), or orchestrate via **Make.com** (client is considering it) / n8n. Decide when
-      those timers are built; map each trigger → message → channel then.
+- [ ] WhatsApp Business API access route (Meta Cloud API direct vs provider like 360dialog/Twilio) + sender number approval.
+- [x] **Automations orchestration — RESOLVED → split by criticality** (#57): transactional/operational
+      in-app behind `MessagingProvider`; marketing Newsletter external (MailChimp/Make). What remains for a
+      **dedicated follow-up grill** is the message-by-message **trigger → message → channel → timing map**
+      (§3/§4): booking confirmation · D−14 charge + receipt · charge-failed link/alert (#49) · D−21 under-min
+      escalation (#52) · evening-before reminder (Waze + guide phone; multi-guide lookup later) · optional
+      weather · day-after social-links message · the §4 **Lead auto-response WhatsApp** (asks #participants /
+      date / trip-type before Stav replies). Most **exact timings are Stav-owned** (§3/§6).
+- [ ] **WhatsApp Business API access route** (Meta Cloud API direct vs 360dialog/Twilio) + sender-number
+      approval + **Meta-approved message templates** (Niv drafts, Stav tweaks the wording — §3). Gates every
+      transactional WhatsApp message.
+- [ ] **Newsletter tool choice — MailChimp vs other external** (Niv to evaluate, §9). Must sync the #55
+      consent state (export only opted-in) and handle unsubscribe → write back opt-out. Long-term: filter the
+      audience by trip-type interest (multi-guide vision).
+- [ ] **Cancellation-policy final content (#13 is provisional).** Stav writes the real fee tiers/timing +
+      the full policy page (§1/§7), replacing the copied "חבל ארץ" text; then **bump `TERMS_VERSION`**. The
+      structure (before-charge = free; after-charge = fee for customer-cancel / full refund for company-
+      cancel, #50) holds regardless of his numbers. Also confirm the Cardcom **refund fee** (§1, e.g. ~10₪)
+      and, if any, disclose it in the cancellation message.
+- [ ] **Q&A/FAQ page content** (Stav writes with AI; Niv embeds — §4) and **SEO articles** section on trail
+      pages (§10, already in dev). Content-owned, not a design fork.
 - [ ] **Admin password recovery not wired** — admin login is password-only; there is no recovery/callback
       route, and Supabase's recovery email redirects to the Site URL with a token the app can't handle
       (surfaced 2026-08-09 during live login verification). Fine for a single owner in v1 (set/reset the

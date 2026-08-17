@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, Calendar, Clock } from "lucide-react";
 import type { DepartureAvailability, Trail } from "@/lib/catalog/types";
 import { DIFFICULTY_DOT_CLASS } from "@/lib/catalog/difficulty";
+import { trailImageUrl } from "@/lib/catalog/trail-image";
 import { formatTrailDate, formatHebrewWeekday } from "@/lib/format/date";
 import { formatPrice } from "@/lib/format/price";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +18,14 @@ export interface TrailCardItem {
 /** Catalog trail card: hero image + region/difficulty, then next-departure footer. */
 export function TrailCard({ trail, nextDeparture }: TrailCardItem) {
   const href = `/trails/${trail.slug}`;
+  const heroUrl = trailImageUrl(trail.hero_image);
 
   return (
     <article className="flex flex-col overflow-hidden rounded-xl bg-card shadow-sm transition-shadow hover:shadow-md">
       <Link href={href} className="group relative block aspect-[4/3]">
-        {trail.hero_image ? (
+        {heroUrl ? (
           <Image
-            src={trail.hero_image}
+            src={heroUrl}
             alt={trail.name}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"

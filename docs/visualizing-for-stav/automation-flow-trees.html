@@ -1,0 +1,868 @@
+<title>Kama Trails — Automation & Decision Flow Trees</title>
+<style>
+  :root {
+    --ground: #f5f6f2;
+    --surface: #ffffff;
+    --surface-2: #eef1ea;
+    --ink: #1b201a;
+    --muted: #5b645a;
+    --faint: #838c81;
+    --border: #dde2d7;
+    --line: #c4ccbe;
+    --primary: #2e6b40;
+    --primary-ink: #204d2e;
+
+    --trigger: #4a58a3;
+    --auto: #2c7d4d;
+    --charge: #a67708;
+    --msg: #0d838c;
+    --alert: #c2681b;
+    --manual: #7a4bb0;
+    --refund: #c0433a;
+
+    --good-bg: #e4f0e6; --good-ink: #226037;
+    --bad-bg: #f6e3e1; --bad-ink: #a5382f;
+    --hold-bg: #ecefe6; --hold-ink: #5b645a;
+
+    --radius: 12px;
+    --maxw: 1120px;
+    --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #121511;
+      --surface: #1b1f19;
+      --surface-2: #222720;
+      --ink: #e7ebe3;
+      --muted: #a4ac9f;
+      --faint: #808a7c;
+      --border: #2e3529;
+      --line: #3a4234;
+      --primary: #6fb884;
+      --primary-ink: #a7d7b4;
+
+      --trigger: #8b96d8;
+      --auto: #63c088;
+      --charge: #e0b23f;
+      --msg: #47bec6;
+      --alert: #e29453;
+      --manual: #b28ce0;
+      --refund: #e88178;
+
+      --good-bg: #1e3326; --good-ink: #8fd6a4;
+      --bad-bg: #34211f; --bad-ink: #ef9f97;
+      --hold-bg: #262b22; --hold-ink: #a4ac9f;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f5f6f2; --surface: #ffffff; --surface-2: #eef1ea;
+    --ink: #1b201a; --muted: #5b645a; --faint: #838c81; --border: #dde2d7; --line: #c4ccbe;
+    --primary: #2e6b40; --primary-ink: #204d2e;
+    --trigger:#4a58a3; --auto:#2c7d4d; --charge:#a67708; --msg:#0d838c; --alert:#c2681b; --manual:#7a4bb0; --refund:#c0433a;
+    --good-bg:#e4f0e6; --good-ink:#226037; --bad-bg:#f6e3e1; --bad-ink:#a5382f; --hold-bg:#ecefe6; --hold-ink:#5b645a;
+  }
+  :root[data-theme="dark"] {
+    --ground: #121511; --surface: #1b1f19; --surface-2: #222720;
+    --ink: #e7ebe3; --muted: #a4ac9f; --faint: #808a7c; --border: #2e3529; --line: #3a4234;
+    --primary: #6fb884; --primary-ink: #a7d7b4;
+    --trigger:#8b96d8; --auto:#63c088; --charge:#e0b23f; --msg:#47bec6; --alert:#e29453; --manual:#b28ce0; --refund:#e88178;
+    --good-bg:#1e3326; --good-ink:#8fd6a4; --bad-bg:#34211f; --bad-ink:#ef9f97; --hold-bg:#262b22; --hold-ink:#a4ac9f;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px 96px; }
+
+  header.hero {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 10%, var(--ground)), var(--ground));
+  }
+  header.hero .contour {
+    position: absolute; inset: 0; opacity: .5; pointer-events: none;
+    background-image:
+      repeating-radial-gradient(circle at 82% 18%,
+        transparent 0 26px,
+        color-mix(in srgb, var(--primary) 22%, transparent) 26px 27.4px,
+        transparent 27.4px 54px);
+    mask-image: linear-gradient(90deg, transparent 30%, #000 100%);
+  }
+  .hero-inner { position: relative; max-width: var(--maxw); margin: 0 auto; padding: 44px 24px 34px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--primary-ink); margin: 0 0 14px; }
+  h1 { font-size: clamp(28px, 4.4vw, 44px); line-height: 1.05; letter-spacing: -.02em; margin: 0 0 14px; text-wrap: balance; font-weight: 800; max-width: 20ch; }
+  .lede { font-size: 17px; color: var(--muted); max-width: 68ch; margin: 0; }
+  .lede code { font-family: var(--mono); font-size: .86em; }
+  .lede b { color: var(--ink); }
+  .src { margin-top: 18px; font-size: 13px; color: var(--faint); font-family: var(--mono); }
+  .src b { color: var(--muted); font-weight: 600; }
+  .altdoc { margin-top: 12px; font-size: 13.5px; }
+  .altdoc a { color: var(--primary-ink); font-weight: 600; }
+
+  .legend { margin: 28px 0 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+  .legend h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: var(--faint); margin: 0 0 14px; font-family: var(--mono); }
+  .legend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 22px; }
+  .lg { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; }
+  .lg .sw { width: 13px; height: 13px; border-radius: 4px; margin-top: 3px; flex: none; }
+  .lg b { font-weight: 650; }
+  .lg span { color: var(--muted); }
+  .actors { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+  .actors .lbl { font-size: 12px; color: var(--faint); font-family: var(--mono); text-transform: uppercase; letter-spacing: .1em; margin-right: 4px; }
+
+  section.flow { margin-top: 40px; scroll-margin-top: 20px; }
+  .flow-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .flow-num { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--surface); background: var(--primary); min-width: 26px; height: 26px; padding: 0 6px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .flow-head h2 { font-size: 21px; letter-spacing: -.01em; margin: 0; font-weight: 750; }
+  .flow-sub { color: var(--muted); font-size: 14.5px; margin: 2px 0 18px 40px; max-width: 82ch; }
+  .flow-sub code, .flow-sub b { font-family: var(--mono); font-size: .9em; }
+  .flow-sub b { color: var(--ink); font-weight: 600; }
+
+  .tree-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 8px 20px 4px; overflow-x: auto; }
+
+  ul.branch { list-style: none; margin: 0; padding: 0 0 0 30px; position: relative; }
+  ul.branch.root { padding-left: 6px; }
+  ul.branch li { position: relative; padding: 7px 0 7px 24px; }
+  ul.branch li::before { content: ""; position: absolute; left: 0; top: -7px; height: calc(100% + 7px); border-left: 2px solid var(--line); }
+  ul.branch li:last-child::before { height: 34px; }
+  ul.branch li::after { content: ""; position: absolute; left: 0; top: 27px; width: 20px; border-top: 2px solid var(--line); }
+  ul.branch.root > li { padding-left: 0; }
+  ul.branch.root > li::before, ul.branch.root > li::after { display: none; }
+
+  .node { --hue: var(--auto); display: grid; grid-template-columns: auto 1fr; gap: 11px; align-items: start; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--hue); border-radius: 9px; padding: 10px 13px; max-width: 660px; }
+  .node .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--hue); margin-top: 6px; flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--hue) 18%, transparent); }
+  .node .title { font-weight: 640; font-size: 14.5px; letter-spacing: -.005em; }
+  .node .detail { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .node .meta { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  .n-trigger { --hue: var(--trigger); }
+  .n-auto    { --hue: var(--auto); }
+  .n-charge  { --hue: var(--charge); }
+  .n-msg     { --hue: var(--msg); }
+  .n-alert   { --hue: var(--alert); }
+  .n-manual  { --hue: var(--manual); }
+  .n-refund  { --hue: var(--refund); }
+
+  .chip { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+  .actor { color: var(--hue); background: color-mix(in srgb, var(--hue) 12%, transparent); border-color: color-mix(in srgb, var(--hue) 30%, transparent); }
+  .a-system  { --hue: var(--auto); }
+  .a-stav    { --hue: var(--manual); }
+  .a-customer{ --hue: var(--msg); }
+  .a-cardcom { --hue: var(--trigger); }
+  .a-time    { --hue: var(--charge); }
+
+  code.state { font-family: var(--mono); font-size: 11.5px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--hold-bg); color: var(--hold-ink); border: 1px solid var(--border); }
+  code.state.good { background: var(--good-bg); color: var(--good-ink); border-color: color-mix(in srgb, var(--good-ink) 25%, transparent); }
+  code.state.bad  { background: var(--bad-bg); color: var(--bad-ink); border-color: color-mix(in srgb, var(--bad-ink) 25%, transparent); }
+  .arrow { color: var(--faint); font-size: 12px; font-family: var(--mono); }
+
+  .cond { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; margin-bottom: 5px; }
+  .cond.ok  { color: var(--good-ink); border-color: color-mix(in srgb, var(--good-ink) 30%, transparent); }
+  .cond.no  { color: var(--bad-ink);  border-color: color-mix(in srgb, var(--bad-ink) 30%, transparent); }
+  .cond.wait{ color: var(--charge);   border-color: color-mix(in srgb, var(--charge) 35%, transparent); }
+
+  .ref { font-family: var(--mono); font-size: 10.5px; color: var(--faint); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; text-decoration: none; }
+  a.ref:hover { color: var(--primary-ink); border-color: var(--primary); }
+
+  .note { margin: 14px 0 0 40px; max-width: 82ch; font-size: 13px; color: var(--muted); border-left: 3px solid color-mix(in srgb, var(--charge) 50%, var(--border)); background: color-mix(in srgb, var(--charge) 7%, var(--surface)); padding: 9px 14px; border-radius: 0 8px 8px 0; }
+  .note b { color: var(--ink); }
+  .note code { font-family: var(--mono); font-size: .9em; }
+
+  nav.toc { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px; }
+  nav.toc a { font-size: 13px; text-decoration: none; color: var(--muted); border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 5px 12px; transition: border-color .15s, color .15s; }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--primary-ink); border-color: var(--primary); outline: none; }
+  nav.toc a .n { font-family: var(--mono); color: var(--faint); margin-right: 6px; }
+
+  footer.foot { margin-top: 54px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--faint); font-size: 12.5px; font-family: var(--mono); }
+  footer.foot a { color: var(--primary-ink); }
+
+  a:focus-visible, .node:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
+
+  @media (max-width: 560px) {
+    ul.branch { padding-left: 20px; }
+    ul.branch li { padding-left: 18px; }
+    ul.branch li::after { width: 14px; }
+    .node { max-width: none; }
+    .flow-sub, .note { margin-left: 0; }
+  }
+</style>
+
+<header class="hero">
+  <div class="contour"></div>
+  <div class="hero-inner">
+    <p class="eyebrow">Kama Trails · internal reference</p>
+    <h1>Automation &amp; Decision Flow Trees</h1>
+    <p class="lede">
+      Every branch of the full funnel — from first inquiry to post-trip community — with each automation,
+      each message, and each point where an alert fires to <b>Stav</b> or a human decision replaces an
+      automatic one. The payment spine is <b>card tokenization</b>: the card is tokenized at registration,
+      the real charge runs <code>~14 days before departure</code>.
+    </p>
+    <p class="src">Source: <b>DECISIONS.md #46–#57</b> · <b>meeting-summary-2026-08-16</b> · <b>sales-funnel-and-automations.md</b></p>
+    <p class="altdoc">👉 Non-technical, plain-language version for Stav: <a href="./automation-flow-for-stav.html">automation-flow-for-stav.html</a> (Hebrew)</p>
+    <nav class="toc" aria-label="Flow index">
+      <a href="#f1"><span class="n">1</span>First inquiry (lead)</a>
+      <a href="#f2"><span class="n">2</span>Discovery &amp; needs</a>
+      <a href="#f3"><span class="n">3</span>Quote &amp; closing</a>
+      <a href="#f4"><span class="n">4</span>Registration &amp; card</a>
+      <a href="#f5"><span class="n">5</span>The charge</a>
+      <a href="#f6"><span class="n">6</span>Trip preparation</a>
+      <a href="#f7"><span class="n">7</span>Follow-up &amp; community</a>
+      <a href="#f8"><span class="n">8</span>Cancellation &amp; refund</a>
+      <a href="#f9"><span class="n">9</span>Under-minimum escalation</a>
+      <a href="#f10"><span class="n">10</span>Admin (Stav) actions</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="legend" aria-label="Legend">
+    <h2>How to read a node</h2>
+    <div class="legend-grid">
+      <div class="lg"><span class="sw" style="background:var(--trigger)"></span><div><b>Trigger</b> <span>— entry point or time-based trigger</span></div></div>
+      <div class="lg"><span class="sw" style="background:var(--auto)"></span><div><b>Automatic action</b> <span>— the system does it, no human</span></div></div>
+      <div class="lg"><span class="sw" style="background:var(--charge)"></span><div><b>Money moves</b> <span>— the actual card charge / capture</span></div></div>
+      <div class="lg"><span class="sw" style="background:var(--msg)"></span><div><b>Message to customer</b> <span>— email + WhatsApp template</span></div></div>
+      <div class="lg"><span class="sw" style="background:var(--alert)"></span><div><b>Alert to Stav</b> <span>— dashboard / push notification / task</span></div></div>
+      <div class="lg"><span class="sw" style="background:var(--manual)"></span><div><b>Manual decision</b> <span>— Stav clicks the button; never automatic</span></div></div>
+      <div class="lg"><span class="sw" style="background:var(--refund)"></span><div><b>Refund / cancel</b> <span>— money returns or seat is dropped</span></div></div>
+    </div>
+    <div class="actors">
+      <span class="lbl">Actors</span>
+      <span class="chip actor a-time">Time</span>
+      <span class="chip actor a-customer">Customer</span>
+      <span class="chip actor a-cardcom">Cardcom</span>
+      <span class="chip actor a-system">System</span>
+      <span class="chip actor a-stav">Stav</span>
+      <span class="lbl" style="margin-left:8px">States</span>
+      <code class="state">lead</code>
+      <code class="state">held</code>
+      <code class="state">reserved</code>
+      <code class="state good">confirmed</code>
+      <code class="state bad">cancelled</code>
+      <code class="state bad">expired</code>
+    </div>
+  </div>
+
+  <!-- FLOW 1 : First inquiry -->
+  <section class="flow" id="f1">
+    <div class="flow-head"><span class="flow-num">1</span><h2>First inquiry — lead capture &amp; the 2-hour SLA</h2></div>
+    <p class="flow-sub">
+      Every channel (site form, Facebook, WhatsApp) drops a lead into one inbox. Nothing is allowed to
+      sit unanswered — an immediate auto-reply goes out, and if no one has called back in <b>2 hours</b>
+      the lead escalates. Anti-spam already blocks automated form fills.
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-trigger"><span class="dot"></span><div>
+            <div class="title">Inquiry arrives — site form / Facebook / WhatsApp / private-trip form</div>
+            <div class="detail">Captured and classified in one place.</div>
+            <div class="meta"><span class="chip actor a-customer">Customer</span><span class="arrow">→</span><code class="state">lead</code></div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">Immediate auto-reply (WhatsApp)</div>
+                <div class="detail">"We got your inquiry — Stav will get back to you shortly."</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+            </li>
+            <li>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">Auto-WhatsApp to pre-qualify (not a full chatbot)</div>
+                <div class="detail">Asks for participants, date, trip type — filters serious inquiries before Stav calls back.</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+            </li>
+            <li>
+              <div class="node n-trigger"><span class="dot"></span><div>
+                <div class="title">Has Stav called back? (timer)</div>
+                <div class="meta"><span class="chip actor a-time">Time</span></div>
+              </div></div>
+              <ul class="branch">
+                <li>
+                  <span class="cond ok">called within 2h</span>
+                  <div class="node n-auto"><span class="dot"></span><div>
+                    <div class="title">Move lead to "needs clarification" → Flow 2</div>
+                    <div class="meta"><a class="ref" href="#f2">go to Flow 2 ↓</a></div>
+                  </div></div>
+                </li>
+                <li>
+                  <span class="cond no">2h passed, no contact</span>
+                  <div class="node n-alert"><span class="dot"></span><div>
+                    <div class="title">Second alert to Stav + move to "urgent handling"</div>
+                    <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-stav">Stav</span></div>
+                  </div></div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <p class="note"><b>Volume today is low</b> (a few a day), so the auto-reply + pre-qualify is what carries this stage; the 2-hour escalation is the safety net that stops a lead from being forgotten.</p>
+  </section>
+
+  <!-- FLOW 2 : Discovery -->
+  <section class="flow" id="f2">
+    <div class="flow-head"><span class="flow-num">2</span><h2>Discovery &amp; needs — the mandatory-fields gate</h2></div>
+    <p class="flow-sub">
+      The discovery call collects the details a quote depends on. The system <b>blocks the lead from
+      advancing — and blocks any quote from being sent — until the required fields are filled</b>: date,
+      number of participants, trip type, budget.
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-trigger"><span class="dot"></span><div>
+            <div class="title">Lead is in "needs clarification"</div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <div class="node n-alert"><span class="dot"></span><div>
+                <div class="title">Reminder to schedule the discovery call</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-stav">Stav</span></div>
+              </div></div>
+            </li>
+            <li>
+              <div class="node n-manual"><span class="dot"></span><div>
+                <div class="title">Discovery call — capture group size, date, difficulty, budget, expectations</div>
+                <div class="meta"><span class="chip actor a-stav">Stav</span></div>
+              </div></div>
+              <ul class="branch">
+                <li>
+                  <span class="cond no">required fields missing</span>
+                  <div class="node n-auto"><span class="dot"></span><div>
+                    <div class="title">Block stage transition — no quote can be sent</div>
+                    <div class="detail">Hard gate on date + participants + type + budget.</div>
+                    <div class="meta"><span class="chip actor a-system">System</span></div>
+                  </div></div>
+                </li>
+                <li>
+                  <span class="cond ok">all required fields filled</span>
+                  <div class="node n-auto"><span class="dot"></span><div>
+                    <div class="title">Unlock quote generation → Flow 3</div>
+                    <div class="meta"><a class="ref" href="#f3">go to Flow 3 ↓</a></div>
+                  </div></div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FLOW 3 : Quote & closing -->
+  <section class="flow" id="f3">
+    <div class="flow-head"><span class="flow-num">3</span><h2>Price quote &amp; closing — 24h / 48h reminders</h2></div>
+    <p class="flow-sub">
+      The quote goes out over email and WhatsApp with a dynamic link. Two automatic reminders chase it;
+      if it's still open after <b>48 hours</b>, an urgent phone-follow-up task lands in Stav's calendar so
+      the lead doesn't cool off.
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-msg"><span class="dot"></span><div>
+            <div class="title">Send the quote (email + WhatsApp) with a dynamic link</div>
+            <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <span class="cond wait">+24h, no response</span>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">First reminder (WhatsApp)</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+            </li>
+            <li>
+              <span class="cond wait">+48h, no response</span>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">Second reminder (WhatsApp)</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+              <ul class="branch">
+                <li>
+                  <div class="node n-alert"><span class="dot"></span><div>
+                    <div class="title">Still no response → open "urgent phone follow-up" task in Stav's calendar</div>
+                    <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-stav">Stav</span></div>
+                  </div></div>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <span class="cond ok">customer approves the quote</span>
+              <div class="node n-auto"><span class="dot"></span><div>
+                <div class="title">Advance to registration &amp; card → Flow 4</div>
+                <div class="meta"><a class="ref" href="#f4">go to Flow 4 ↓</a></div>
+              </div></div>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FLOW 4 : Registration & tokenization -->
+  <section class="flow" id="f4">
+    <div class="flow-head"><span class="flow-num">4</span><h2>Registration &amp; card — tokenize, don't charge</h2></div>
+    <p class="flow-sub">
+      The seat is secured by <b>tokenizing the card, not by paying</b> (#46). Cardcom stores the card and
+      returns a Token; the site keeps only the Token. Booking becomes <code>reserved</code> — seat secured,
+      capacity occupied, <b>no money moved</b>.
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-trigger"><span class="dot"></span><div>
+            <div class="title">Customer registers for a departure</div>
+            <div class="detail">Picks participants; a <b>separate marketing opt-in checkbox</b> is required to join the mailing list (§2).</div>
+            <div class="meta"><span class="chip actor a-customer">Customer</span></div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <div class="node n-auto"><span class="dot"></span><div>
+                <div class="title">Seat held &amp; customer redirected to Cardcom</div>
+                <div class="detail">A reassurance message shows first ("you're moving to a secure payment environment").</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><code class="state">held</code><span class="ref">HOLD ≈ 40 min · #44</span></div>
+              </div></div>
+              <ul class="branch">
+                <li>
+                  <div class="node n-trigger"><span class="dot"></span><div>
+                    <div class="title">Cardcom runs a <b>tokenize-only</b> operation</div>
+                    <div class="detail">No charge and no credit-limit hold. Card stored encrypted at Cardcom; a Token is returned.</div>
+                    <div class="meta"><span class="chip actor a-cardcom">Cardcom</span></div>
+                  </div></div>
+                  <ul class="branch">
+                    <li>
+                      <span class="cond ok">token created</span>
+                      <div class="node n-auto"><span class="dot"></span><div>
+                        <div class="title">Save the Token only — never the card number</div>
+                        <div class="detail">Token stays valid until the card itself expires — no time limit.</div>
+                        <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><code class="state">reserved</code><span class="ref">#46</span></div>
+                      </div></div>
+                      <ul class="branch">
+                        <li>
+                          <div class="node n-msg"><span class="dot"></span><div>
+                            <div class="title">Booking confirmation (email + WhatsApp)</div>
+                            <div class="detail"><b>Must NOT say "we saved your card"</b> — Cardcom holds the card, we hold only the Token (#48). No receipt yet — the receipt is issued only when money moves.</div>
+                            <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span><span class="arrow">then</span><a class="ref" href="#f5">Flow 5 ↓</a></div>
+                          </div></div>
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      <span class="cond no">fail · abandon · hold expires</span>
+                      <div class="node n-refund"><span class="dot"></span><div>
+                        <div class="title">Seat released, booking expires</div>
+                        <div class="detail">Nothing was charged, so nothing to refund. "Paid but no seat" is designed out (#32).</div>
+                        <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><code class="state bad">expired</code></div>
+                      </div></div>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FLOW 5 : the charge -->
+  <section class="flow" id="f5">
+    <div class="flow-head"><span class="flow-num">5</span><h2>The charge — fires ~14 days before departure</h2></div>
+    <p class="flow-sub">
+      Trigger time = <code>max(departure − 14 days, now)</code> (#47). A departure booked a month out is
+      charged at D−14; one booked inside 14 days is charged ≈ immediately — same path. This is the
+      <b>only place money moves</b>, and where the receipt is issued (#48).
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-trigger"><span class="dot"></span><div>
+            <div class="title">Time trigger: <code>max(departure − 14d, now)</code></div>
+            <div class="meta"><span class="chip actor a-time">Time</span><span class="arrow">on</span><code class="state">reserved</code></div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <div class="node n-charge"><span class="dot"></span><div>
+                <div class="title">Charge the full amount to the saved Token</div>
+                <div class="detail">Cardcom captures it like a normal online purchase.</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-cardcom">Cardcom</span></div>
+              </div></div>
+              <ul class="branch">
+                <li>
+                  <span class="cond ok">charge succeeds</span>
+                  <div class="node n-auto"><span class="dot"></span><div>
+                    <div class="title">Booking becomes paid &amp; confirmed</div>
+                    <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><code class="state good">confirmed</code><span class="ref">#47</span></div>
+                  </div></div>
+                  <ul class="branch">
+                    <li>
+                      <div class="node n-msg"><span class="dot"></span><div>
+                        <div class="title">Cardcom auto-issues the receipt (חשבונית מס/קבלה) &amp; emails it</div>
+                        <div class="detail">Via the <code>Document</code> block, folded into the charge call — only now, because money moved (#36, #48).</div>
+                        <div class="meta"><span class="chip actor a-cardcom">Cardcom</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+                      </div></div>
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <span class="cond no">charge fails</span>
+                  <div class="node n-auto"><span class="dot"></span><div>
+                    <div class="title">(a) Auto-retry the Token</div>
+                    <div class="detail">A transient decline may clear on retry.</div>
+                    <div class="meta"><span class="chip actor a-system">System</span><span class="ref">#49</span></div>
+                  </div></div>
+                  <ul class="branch">
+                    <li>
+                      <span class="cond no">still failing</span>
+                      <div class="node n-msg"><span class="dot"></span><div>
+                        <div class="title">(b) Send the customer a payment link</div>
+                        <div class="detail">Self-serve fix — the customer pays through a fresh link.</div>
+                        <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+                      </div></div>
+                    </li>
+                    <li>
+                      <div class="node n-alert"><span class="dot"></span><div>
+                        <div class="title">(c) Alert Stav: retries failed, link sent</div>
+                        <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-stav">Stav</span></div>
+                      </div></div>
+                    </li>
+                    <li>
+                      <span class="cond no">still unpaid after grace window</span>
+                      <div class="node n-refund"><span class="dot"></span><div>
+                        <div class="title">(d) Auto-cancel &amp; release the seat</div>
+                        <div class="detail"><b>The only automatic cancellation in the system</b> — distinct from the under-minimum decision, which is always Stav's button (Flow 9).</div>
+                        <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><code class="state bad">cancelled</code><span class="ref">#49</span></div>
+                      </div></div>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <p class="note"><b>Why 14 days:</b> Cardcom can't hold a credit-limit reservation for more than a week, so instead of authorizing early we tokenize now and capture near departure. The charge window (D−14) and the whole cancellation-fee matrix live inside it.</p>
+  </section>
+
+  <!-- FLOW 6 : Trip preparation -->
+  <section class="flow" id="f6">
+    <div class="flow-head"><span class="flow-num">6</span><h2>Trip preparation — the countdown messages &amp; guide checklist</h2></div>
+    <p class="flow-sub">
+      As the date approaches, a fixed sequence of messages keeps the customer ready and the guide equipped.
+      Stav sets the exact number of reminders and their timings.
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-trigger"><span class="dot"></span><div>
+            <div class="title">Departure date approaching · booking is <code class="state good">confirmed</code></div>
+            <div class="meta"><span class="chip actor a-time">Time</span></div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <span class="cond wait">7 days before</span>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">Admin letter: gear list, meeting point + schedule, Waze</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+            </li>
+            <li>
+              <span class="cond wait">3 days before</span>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">Reminder + clear cancellation clause</div>
+                <div class="detail">States plainly that cancelling now carries a fee (see Flow 8).</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+            </li>
+            <li>
+              <span class="cond wait">evening before</span>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">Waze link + guide's phone (+ optional weather forecast)</div>
+                <div class="detail">With multiple guides later, the system pulls the guide assigned to this trip.</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+            </li>
+            <li>
+              <div class="node n-auto"><span class="dot"></span><div>
+                <div class="title">Customer's digital arrival confirmation</div>
+                <div class="meta"><span class="chip actor a-customer">Customer</span><span class="arrow">→</span><span class="chip actor a-system">System</span></div>
+              </div></div>
+            </li>
+            <li>
+              <div class="node n-auto"><span class="dot"></span><div>
+                <div class="title">Guide checklist — verify gear &amp; logistics</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-stav">Guide</span></div>
+              </div></div>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FLOW 7 : Follow-up & community -->
+  <section class="flow" id="f7">
+    <div class="flow-head"><span class="flow-num">7</span><h2>Follow-up &amp; community — after the trip</h2></div>
+    <p class="flow-sub">
+      Close the loop: collect anything outstanding, gather reviews and referrals, and fold happy hikers
+      into the community. Adding someone to the mailing list requires their explicit opt-in (§2).
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-trigger"><span class="dot"></span><div>
+            <div class="title">Trip has ended</div>
+            <div class="meta"><span class="chip actor a-time">Time</span></div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <span class="cond wait">day / evening after</span>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">Social links — upload photos, share the experience</div>
+                <div class="detail">A discount-for-share incentive is planned as a later add-on.</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+            </li>
+            <li>
+              <span class="cond wait">24h after</span>
+              <div class="node n-charge"><span class="dot"></span><div>
+                <div class="title">Collect any outstanding balance</div>
+                <div class="detail">Applies only if a trip was sold on a deposit basis; a full charge at D−14 leaves nothing to collect. If a balance exists, a collection task is opened.</div>
+                <div class="meta"><span class="chip actor a-system">System</span></div>
+              </div></div>
+            </li>
+            <li>
+              <div class="node n-msg"><span class="dot"></span><div>
+                <div class="title">Satisfaction survey (NPS) + Google/Facebook review link</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+              </div></div>
+            </li>
+            <li>
+              <div class="node n-auto"><span class="dot"></span><div>
+                <div class="title">Add to the hikers' community &amp; mailing list</div>
+                <div class="detail">Only with opt-in consent. Customer profile becomes a "community member."</div>
+                <div class="meta"><span class="chip actor a-system">System</span></div>
+              </div></div>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FLOW 8 : cancellation & refund -->
+  <section class="flow" id="f8">
+    <div class="flow-head"><span class="flow-num">8</span><h2>Cancellation &amp; refund — decided by charge state, not the calendar</h2></div>
+    <p class="flow-sub">
+      The first fork is <b>has the charge happened yet</b> (#50). Before the charge nothing was taken, so
+      cancelling is free for everyone. After the charge, the fork is <b>who cancels</b>. All refunds are
+      <b>issued manually by Stav</b> from the dashboard (#15) — there is no customer self-serve refund.
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-trigger"><span class="dot"></span><div>
+            <div class="title">A booking is being cancelled</div>
+            <div class="detail">Fork on charge state ↓</div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <span class="cond ok">before the charge · &gt;14 days out · still reserved</span>
+              <div class="node n-auto"><span class="dot"></span><div>
+                <div class="title">Release seat + drop the Token — nothing owed</div>
+                <div class="detail">No money ever moved, so there is no refund. The clean zone (whoever cancels).</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><code class="state bad">cancelled</code></div>
+              </div></div>
+            </li>
+            <li>
+              <span class="cond wait">after the charge · money already taken</span>
+              <div class="node n-trigger"><span class="dot"></span><div>
+                <div class="title">Fork on <b>who</b> cancels ↓</div>
+              </div></div>
+              <ul class="branch">
+                <li>
+                  <span class="cond no">customer cancels</span>
+                  <div class="node n-refund"><span class="dot"></span><div>
+                    <div class="title">Refund <b>minus</b> the policy fee, by tier (#13)</div>
+                    <div class="detail">Stav issues it manually; all tiers fall inside the 14-day charged window. Stav finalizes the exact numbers.</div>
+                    <div class="meta"><span class="chip actor a-stav">Stav</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+                  </div></div>
+                  <ul class="branch">
+                    <li><div class="node n-refund"><span class="dot"></span><div><div class="title">Cancel 5–6 days before → fee <b>50&nbsp;₪ / participant</b></div></div></div></li>
+                    <li><div class="node n-refund"><span class="dot"></span><div><div class="title">Cancel 3–4 days before → fee <b>150&nbsp;₪ / participant</b></div></div></div></li>
+                    <li><div class="node n-refund"><span class="dot"></span><div><div class="title">Cancel within 48 hours → <b>full cost / participant, no refund</b></div></div></div></li>
+                  </ul>
+                </li>
+                <li>
+                  <span class="cond ok">company cancels — weather · below minimum · force majeure</span>
+                  <div class="node n-refund"><span class="dot"></span><div>
+                    <div class="title"><b>Full refund</b> OR a free reschedule to a new date</div>
+                    <div class="detail">No fee. This is the branch behind the "cancel trip" button (Flow 9) and mid-trip weather cancels (§6).</div>
+                    <div class="meta"><span class="chip actor a-stav">Stav</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+                  </div></div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <p class="note"><b>Cardcom refund fee:</b> to confirm whether Cardcom charges a fee per credit (e.g. ~10&nbsp;₪). If it does, the cancellation message must disclose that the refund is net of a handling fee (§1).</p>
+  </section>
+
+  <!-- FLOW 9 : minimum participants escalation -->
+  <section class="flow" id="f9">
+    <div class="flow-head"><span class="flow-num">9</span><h2>Under-minimum escalation — staged alerts to Stav</h2></div>
+    <p class="flow-sub">
+      When a departure is below its minimum, the system nudges Stav on a schedule so he can act while
+      it's still cheap to cancel. The <b>final cancel is always Stav's button</b> — a departure is never
+      auto-cancelled for low enrollment (#52). The charge still fires automatically.
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-trigger"><span class="dot"></span><div>
+            <div class="title">Departure is below its minimum participants</div>
+            <div class="detail">Stav sets the min per trip; he defines the alert timings/frequency.</div>
+            <div class="meta"><span class="chip actor a-system">System</span></div>
+          </div></div>
+          <ul class="branch">
+            <li>
+              <span class="cond wait">≈ D−21 · a week before the charge</span>
+              <div class="node n-alert"><span class="dot"></span><div>
+                <div class="title">Rung 1 — notice to Stav <b>before the charge</b></div>
+                <div class="detail">Placed in the "before charge = nothing owed, no refunds" zone so a cancel here is clean.</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-stav">Stav</span></div>
+              </div></div>
+              <ul class="branch">
+                <li>
+                  <div class="node n-manual"><span class="dot"></span><div>
+                    <div class="title">Stav tries to save the departure</div>
+                    <div class="detail">Recruit more registrants · push to cabins &amp; social · move the date.</div>
+                    <div class="meta"><span class="chip actor a-stav">Stav</span></div>
+                  </div></div>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <span class="cond wait">further rungs · e.g. D−7, D−2</span>
+              <div class="node n-alert"><span class="dot"></span><div>
+                <div class="title">Repeat escalation alerts to Stav</div>
+                <div class="detail">The charge fires automatically in between — so later cancels land after money moved.</div>
+                <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-stav">Stav</span></div>
+              </div></div>
+            </li>
+            <li>
+              <span class="cond no">Stav decides to cancel — clicks "Cancel trip"</span>
+              <div class="node n-manual"><span class="dot"></span><div>
+                <div class="title">Cancel-trip button (bulk) — never automatic</div>
+                <div class="meta"><span class="chip actor a-stav">Stav</span><span class="arrow">→</span><code class="state bad">cancelled</code><span class="ref">#53</span></div>
+              </div></div>
+              <ul class="branch">
+                <li>
+                  <div class="node n-refund"><span class="dot"></span><div>
+                    <div class="title">Cancels all bookings + auto-refunds the charged ones</div>
+                    <div class="detail">Company-cancel branch of Flow 8 → full refund to all.</div>
+                    <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+                  </div></div>
+                </li>
+                <li>
+                  <div class="node n-msg"><span class="dot"></span><div>
+                    <div class="title">Sends the legal cancellation message</div>
+                    <div class="detail">"Trip cancelled per the cancellation policy — the required minimum wasn't met; your payment is refunded in full."</div>
+                    <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+                  </div></div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FLOW 10 : admin actions -->
+  <section class="flow" id="f10">
+    <div class="flow-head"><span class="flow-num">10</span><h2>Admin action set — Stav can intervene at any stage</h2></div>
+    <p class="flow-sub">
+      The manual override surface (#53), usable <b>at every stage, including after the trip has run</b>
+      (e.g. rain starts mid-trip → cancel and refund everyone, §6). These are buttons, not automations.
+    </p>
+    <div class="tree-card">
+      <ul class="branch root">
+        <li>
+          <div class="node n-manual"><span class="dot"></span><div>
+            <div class="title">Admin dashboard — Stav</div>
+            <div class="meta"><span class="chip actor a-stav">Stav</span></div>
+          </div></div>
+          <ul class="branch">
+            <li><div class="node n-manual"><span class="dot"></span><div>
+              <div class="title">Edit trail / departure fields</div>
+              <div class="detail">Dates, capacity, minimum, price, time.</div>
+            </div></div></li>
+            <li><div class="node n-manual"><span class="dot"></span><div>
+              <div class="title">Open / close registration</div>
+              <div class="detail"><code>closed</code> = sales stopped but the trip still runs (e.g. up to trip start time). Distinct from <code>cancelled</code>.</div>
+            </div></div></li>
+            <li><div class="node n-manual"><span class="dot"></span><div>
+              <div class="title">Cancel trip (bulk)</div>
+              <div class="meta"><span class="arrow">→</span> Flow 9 tail: refund all + legal message.</div>
+            </div></div></li>
+            <li><div class="node n-manual"><span class="dot"></span><div>
+              <div class="title">Add a late participant</div>
+              <div class="detail">Join a departure after it's "closed" / already on the calendar (#51).</div>
+            </div></div></li>
+            <li>
+              <div class="node n-manual"><span class="dot"></span><div>
+                <div class="title">Create a private trip (phone-closed deal)</div>
+                <div class="detail">Template: contact name + phone, date, location/type, participants, price, price per extra participant (e.g. &gt;7 → fixed surcharge each).</div>
+              </div></div>
+              <ul class="branch">
+                <li><div class="node n-auto"><span class="dot"></span><div>
+                  <div class="title">System generates a Cardcom payment link + a trip page</div>
+                  <div class="detail">The page carries the trip details and the cancellation terms.</div>
+                  <div class="meta"><span class="chip actor a-system">System</span><span class="arrow">→</span><span class="chip actor a-customer">Customer</span></div>
+                </div></div></li>
+              </ul>
+            </li>
+            <li><div class="node n-manual"><span class="dot"></span><div>
+              <div class="title">Admin-cancel a single booking</div>
+              <div class="meta"><span class="arrow">→</span> refund per the Flow 8 matrix.</div>
+            </div></div></li>
+            <li><div class="node n-manual"><span class="dot"></span><div>
+              <div class="title">Reschedule a booking to another departure</div>
+              <div class="detail">Old seat released, new seat taken; the free-reschedule branch of Flow 8.</div>
+            </div></div></li>
+            <li><div class="node n-manual"><span class="dot"></span><div>
+              <div class="title">Contact a customer</div>
+            </div></div></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Kama Trails · automation &amp; decision flow trees · generated from DECISIONS.md #46–#57,
+    meeting-summary-2026-08-16 and sales-funnel-and-automations.md.
+    Numbers still to be finalized by Stav: the 14-day charge window · cancellation-fee tiers · reminder
+    &amp; escalation cadence · min/max participants per trip.
+  </footer>
+
+</div>
