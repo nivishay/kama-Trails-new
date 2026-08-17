@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Users, Baby, Building2 } from "lucide-react";
 import { getDeparturesForTrail, getTrails } from "@/lib/catalog";
 import { nextUpcomingDeparture } from "@/lib/catalog/availability";
+import { trailImageUrl } from "@/lib/catalog/trail-image";
 import { Button } from "@/components/ui/button";
 import { TrailCard } from "@/components/catalog/trail-card";
 
@@ -11,6 +12,11 @@ const AUDIENCE_FEATURES = [
   { Icon: Baby, label: "ילדים ונוער" },
   { Icon: Building2, label: "ארגונים ובתי ספר" },
 ];
+
+// Fixed homepage hero (a rappel shot in Keshet Cave), independent of trail order.
+// Stored as a relative trip_photos path; resolved per-environment at render time.
+const HOME_HERO_IMAGE =
+  "keshet-cave/10409645_831951950190766_3874715981567035470_n.jpg";
 
 function Hero({ backgroundImage }: { backgroundImage?: string | null }) {
   return (
@@ -74,7 +80,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <Hero backgroundImage={trails[0]?.hero_image} />
+      <Hero backgroundImage={trailImageUrl(HOME_HERO_IMAGE)} />
 
       <section className="border-b border-border bg-muted/40">
         <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-3">
