@@ -19,7 +19,8 @@ import {
 const ok = (r: { data: unknown; error: unknown }) => !r.error && r.data != null;
 
 const HOLD_MINUTES = 40; // #44 — mirrors the constant in book_trip
-const TERMS_VERSION = "2026-08-13"; // #31 — mirrors the constant in book_trip
+const POLICY_VERSION = "2026-08-13"; // #31/#59 — mirrors c_policy_version in book_trip
+const WAIVER_VERSION = "2026-08-19"; // #59 — mirrors c_waiver_version in book_trip
 
 describe("book_trip grows: deposit, consents, and the hold window (#44/#45)", () => {
   it("sets deposit_amount to the full total in v1 (DEPOSIT_PERCENT = 100)", async () => {
@@ -32,12 +33,14 @@ describe("book_trip grows: deposit, consents, and the hold window (#44/#45)", ()
     expect(Number(r.data.deposit_amount)).toBe(price * 2); // full amount, not a partial deposit
   });
 
-  it("stamps both consents: accepted_terms_at + terms_version (#31)", async () => {
+  it("stamps both mandatory consents split into policy_* and waiver_* (#59)", async () => {
     const { departure } = await createDeparture({ maxCapacity: 5 });
     const r = await book(departure.id, 1);
 
-    expect(r.data.accepted_terms_at).toBeTruthy();
-    expect(r.data.terms_version).toBe(TERMS_VERSION);
+    expect(r.data.policy_accepted_at).toBeTruthy();
+    expect(r.data.policy_version).toBe(POLICY_VERSION);
+    expect(r.data.waiver_signed_at).toBeTruthy();
+    expect(r.data.waiver_version).toBe(WAIVER_VERSION);
   });
 
   it("holds the seat for HOLD_MINUTES, not the old hardcoded 15 (the #44 regression)", async () => {

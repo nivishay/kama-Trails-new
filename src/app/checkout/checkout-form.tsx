@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/format/price";
+import { WAIVER_TEXT } from "@/lib/consents/waiver";
 import { startCheckout, type CheckoutFormState } from "./actions";
 
 const INITIAL: CheckoutFormState = {};
@@ -91,7 +92,7 @@ export function CheckoutForm({
         </div>
       </div>
 
-      <div className="space-y-2 rounded-lg bg-muted/50 p-3 text-sm text-ink">
+      <div className="space-y-3 rounded-lg bg-muted/50 p-3 text-sm text-ink">
         <label className="flex items-start gap-2">
           <input
             type="checkbox"
@@ -111,16 +112,36 @@ export function CheckoutForm({
             ואני מסכים/ה
           </span>
         </label>
-        <label className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            name="consent_risk"
-            required
-            className="mt-1"
-          />
+
+        {/* Signed waiver (DECISIONS #59): a basic e-signature — the tick + the versioned text
+            is the "ref to what he signed"; the booker signs under ייפוי-כוח for all participants.
+            The expandable text is a SIBLING of the label, so reading it never toggles the box. */}
+        <div>
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              name="consent_waiver"
+              required
+              className="mt-1"
+            />
+            <span>קראתי, הבנתי ואני חותם/ת על כתב ההצהרה והוויתור</span>
+          </label>
+          <details className="mt-1 ps-6">
+            <summary className="cursor-pointer text-primary underline">
+              קריאת כתב ההצהרה והוויתור
+            </summary>
+            <p className="mt-2 whitespace-pre-line rounded-md bg-background p-2 text-xs text-muted-foreground">
+              {WAIVER_TEXT}
+            </p>
+          </details>
+        </div>
+
+        {/* Newsletter / Marketing Consent (DECISIONS #55/#59): optional, unticked by default,
+            never blocks booking; writes to the Customer, not the booking. */}
+        <label className="flex items-start gap-2 border-t border-border pt-3">
+          <input type="checkbox" name="consent_marketing" className="mt-1" />
           <span>
-            אני מבין/ה שמדובר בפעילות אתגרית הכרוכה בסיכון ואני מאשר/ת השתתפות
-            מרצוני
+            אשמח לקבל עדכונים על טיולים חדשים ומבצעים (לא חובה)
           </span>
         </label>
       </div>

@@ -11,6 +11,7 @@ function bookAs(
   departureId: string,
   contact: { name: string; phone: string; email: string },
   participants = 1,
+  marketingOptIn = false,
 ) {
   return anon.rpc('book_trip', {
     p_departure_id: departureId,
@@ -18,7 +19,9 @@ function bookAs(
     p_phone: contact.phone,
     p_email: contact.email,
     p_participants_count: participants,
-    p_accepted_terms: true,
+    p_accept_policy: true,
+    p_sign_waiver: true,
+    p_marketing_opt_in: marketingOptIn,
   });
 }
 
