@@ -38,5 +38,6 @@ export function getPaymentProvider(): PaymentProvider {
   return new CardcomProvider({
     terminalNumber: env.terminalNumber,
     apiName: env.apiName,
+    apiPassword: env.apiPassword,
   });
 }

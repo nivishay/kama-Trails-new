@@ -8,6 +8,9 @@
 export interface CardcomCreateRequest {
   TerminalNumber: number;
   ApiName: string;
+  // Required by Cardcom whenever the request creates a document (our Document block below) or a
+  // refund; omitting it fails auth. ApiName alone is enough only for a bare charge.
+  ApiPassword: string;
   Operation: "ChargeOnly";
   ReturnValue: string;
   Amount: number;

@@ -5,6 +5,7 @@
 export interface CardcomEnv {
   terminalNumber: number;
   apiName: string;
+  apiPassword: string;
 }
 
 function requireServerEnv(name: string): string {
@@ -29,5 +30,11 @@ export function readCardcomEnv(): CardcomEnv {
     );
   }
 
-  return { terminalNumber, apiName: requireServerEnv("CARDCOM_API_NAME") };
+  return {
+    terminalNumber,
+    apiName: requireServerEnv("CARDCOM_API_NAME"),
+    // Required for the invoice/receipt document our checkout creates (Cardcom rejects the
+    // request without it — see CardcomCreateRequest.ApiPassword).
+    apiPassword: requireServerEnv("CARDCOM_API_PASSWORD"),
+  };
 }

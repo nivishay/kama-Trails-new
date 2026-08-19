@@ -24,6 +24,8 @@ const RECEIPT_QUANTITY = 1;
 export interface CardcomConfig {
   terminalNumber: number;
   apiName: string;
+  /** Required for document/refund operations; our checkout creates an invoice (see ./env). */
+  apiPassword: string;
   /** Override the API host (tests). Defaults to Cardcom production host. */
   baseUrl?: string;
   /** Injected for testability; defaults to the global fetch. */
@@ -39,12 +41,14 @@ export interface CardcomConfig {
 export class CardcomProvider implements PaymentProvider {
   private readonly terminalNumber: number;
   private readonly apiName: string;
+  private readonly apiPassword: string;
   private readonly baseUrl: string;
   private readonly fetchFn: typeof fetch;
 
   constructor(config: CardcomConfig) {
     this.terminalNumber = config.terminalNumber;
     this.apiName = config.apiName;
+    this.apiPassword = config.apiPassword;
     this.baseUrl = config.baseUrl ?? CARDCOM_BASE_URL;
     this.fetchFn = config.fetchFn ?? fetch;
   }
@@ -53,6 +57,7 @@ export class CardcomProvider implements PaymentProvider {
     const body: CardcomCreateRequest = {
       TerminalNumber: this.terminalNumber,
       ApiName: this.apiName,
+      ApiPassword: this.apiPassword,
       Operation: "ChargeOnly",
       ReturnValue: request.bookingId,
       Amount: request.amount,

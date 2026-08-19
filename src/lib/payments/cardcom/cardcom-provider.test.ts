@@ -18,6 +18,7 @@ function makeProvider(fetchFn: ReturnType<typeof stubFetch>) {
   return new CardcomProvider({
     terminalNumber: 1000,
     apiName: "test-api-name",
+    apiPassword: "test-api-password",
     baseUrl: "https://cardcom.test",
     fetchFn: fetchFn as unknown as typeof fetch,
   });
@@ -55,6 +56,7 @@ describe("CardcomProvider.createCheckout", () => {
     expect(body).toMatchObject({
       TerminalNumber: 1000,
       ApiName: "test-api-name",
+      ApiPassword: "test-api-password", // required for the invoice/document block
       Operation: "ChargeOnly",
       ReturnValue: "booking-abc", // correlation by booking id (#38)
       Amount: 250, // shekels, not agorot (#35)
