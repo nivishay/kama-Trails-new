@@ -299,37 +299,51 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
 
 ## 2026-08-16 meeting — tokenization payment model (see [ADR 0004](./docs/adr/0004-tokenize-at-registration-charge-before-departure.md))
 
+> **⚠ SUPERSEDED (2026-08-19) by #58 — reverted to pay-immediately.** The tokenization model in this
+> section (#46–#50, ADR 0004) is **no longer in effect**: the client chose to keep booking = **paying in
+> full at checkout**, with **no card tokenization and no מסגרת-אשראי hold**. #51/#52/#53/#57 are **amended**
+> (not dropped) — see #58 for the exact cascade. Decisions #6, #30, #32, #37, #40 and ADR 0002 are
+> **restored**. The original 2026-08-16 rationale is kept below for the record.
+>
 > The client cannot hold a credit framework > ~1 week, so v1 **decouples securing the seat from
 > collecting the money**. This **supersedes the "confirmed = paid at checkout" core** of #6, #30,
 > #32, #37, #40 and amends [ADR 0002](./docs/adr/0002-cardcom-confirmation-model.md). #7 (deposit/
 > balance) stays deferred; #44 (hold length) survives (it still only covers the tokenization redirect).
 
-46. **Seat is secured by TOKENIZING the card, not by paying.** Cardcom's hosted page runs a
+46. **⟲ SUPERSEDED by #58 (2026-08-19 revert to pay-immediately): no tokenization and no `reserved`
+    state — lifecycle is `held → confirmed → cancelled/expired`, and `confirmed` again means paid in full
+    at checkout.** ~~Seat is secured by TOKENIZING the card, not by paying.~~ Cardcom's hosted page runs a
     **tokenize-only** op at registration; on success the Booking is **`reserved`** — seat secured,
     capacity occupied, **no money moved**. New lifecycle: `held` → **`reserved`** (Token saved) →
     `confirmed` (Charge succeeded) → `cancelled`/`expired`. `confirmed` **no longer means "paid at
     checkout"** — it means "the Charge ran." Capacity is occupied from `reserved` onward. The customer
     is "booked" at `reserved`.
 
-47. **The Charge runs at `max(departure − 14 days, now)`.** ~14 days before departure, or
+47. **⟲ SUPERSEDED by #58: no scheduled charge — the full amount is charged at checkout.** ~~The Charge runs at `max(departure − 14 days, now)`.~~ ~14 days before departure, or
     **immediately** for a last-minute Booking made inside that window — one scheduled-charge mechanism,
     no special-case path. 14 days is the agreed number (Stav may finalize). A successful Charge flips
     `reserved → confirmed`.
 
-48. **Receipt at Charge; booking-confirmation at registration.** Cardcom auto-issues the חשבונית
+48. **⟲ SUPERSEDED by #58: receipt + booking-confirmation are issued together at checkout — the `Document`
+    block stays on the checkout `LowProfile/Create` call (#36).** ~~Receipt at Charge; booking-confirmation
+    at registration.~~ Cardcom auto-issues the חשבונית
     מס/קבלה (#36) only when money moves (the Charge, ~D−14) — the **`Document` block moves off the
     registration call onto the charge call**; registration is tokenize-only. At registration the
     customer gets a **booking confirmation** stating **when and how much** they'll be charged. **Copy
     must NOT say "we saved your card"** — Cardcom holds the card; we hold only the Token.
 
-49. **Failed-charge handling (the new failure mode).** On charge failure: (a) **auto-retry the Token**
+49. **⟲ SUPERSEDED by #58: there is no later charge to fail, so no retry / pay-now link / 2-day
+    auto-release. A failed payment just lets the hold expire (#21); `payments.status='failed'` returns to
+    unused-in-v1 (#42).** ~~Failed-charge handling (the new failure mode).~~ On charge failure: (a) **auto-retry the Token**
     a few times; (b) **notify the customer with a new pay-now link** (immediate charge — we're inside
     14 days); (c) **notify the Admin** that retries failed and a link was sent; (d) if unpaid after
     **~2 days**, the seat **auto-releases** and the Admin is notified. This is the **one automatic
     cancellation path** — distinct from the admin-decided minimum-participants cancel (#9). Makes
     `payments.status='failed'` (unused per #42) a real state.
 
-50. **Refunds are modeled off charge state, not the calendar.** Before the Charge (>14d out) any
+50. **⟲ SUPERSEDED by #58: refunds are calendar-based (#13) — everyone paid in full at booking, so a
+    customer-cancel refunds minus the #13 tier and a company/departure-cancel is a full refund to all.**
+    ~~Refunds are modeled off charge state, not the calendar.~~ Before the Charge (>14d out) any
     cancellation is **release seat + drop Token, nothing owed**. After the Charge: **customer**-cancel
     → refund **minus** policy fee (#13 tiers, Stav finalizes); **company**-cancel (weather / minimum /
     force majeure) → **full** refund or free reschedule. The fee tiers govern exactly one case
@@ -346,6 +360,9 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
     is identical to standard** — `participants × price_per_person`, admin sets the per-person number;
     the §5 "price per extra participant" field and §6 "above 7 → surcharge" idea are **dropped** (one
     price field, not three).
+    - **⟲ Amended by #58:** the pay-link charges the **full amount immediately** (like self-serve) — not
+      "tokenized now, charged at `max(D−14, now)`." Everything else here (Private Departure, one price field,
+      add-late-participant) stands.
 
 52. **Minimum-participants escalation straddles the charge (amends #9).** The D−14 charge (#47) still
     fires **automatically**; #9's "track-only, admin decides" is preserved as the **final cancel is
@@ -357,6 +374,9 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
     the charge; cancelling then is a full refund to all (#50 company-cancel). Exact timings/frequency
     are **Stav-defined** (provisional). If Stav does nothing at the pre-charge rung, the charge fires
     on schedule.
+    - **⟲ Amended by #58:** there is **no charge boundary / "before-charge free zone"** — everyone paid at
+      booking, so cancelling for low enrollment is always a **full refund to all**, whenever Stav decides.
+      The rungs become plain calendar reminders to act; timing no longer changes what's owed.
 
 53. **Admin action set (resolves the #33 "[OPEN QUESTION]").** Public self-serve registration
     **auto-closes at a per-Departure deadline defaulting to the Departure start time** (Stav can set it
@@ -367,6 +387,8 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
     bookings, auto-refunds the charged ones, sends the legal cancellation message, §6/#50) ·
     **add late Participant** (#51) · **create Private Trip** (#51) · **admin-cancel a single booking**
     (refund per matrix #50) · **contact customer**. **Reschedule is removed for now** (see #54).
+    - **⟲ Amended by #58:** cancel-trip auto-refunds **all** the departure's bookings (under pay-immediately
+      every booking is already paid), and single-booking refunds follow the calendar tiers (#13), not charge state.
 
 54. **Drop the "v1 vs later phase" scoping frame — build the project as a whole** (2026-08-16). Earlier
     decisions carved a minimal "Version One" (#2) with many items pushed to "a later phase" (#4 funnel/
@@ -408,6 +430,83 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
     external** (MailChimp/Make): bulk send, unsubscribe, deliverability are commodity and low-risk if
     flaky. The consent state (#55) is the source of truth and syncs out to the external tool; only
     opted-in Customers are exported.
+    - **⟲ Amended by #58:** the in-app transactional set **drops the D−14 charge job, the charge-failed
+      flow (#49), and seat auto-release** — it keeps booking-confirmation + receipt (at checkout), the
+      evening-before reminder, and the cancellation message. The scheduler survives only for reminders/holds.
+
+## 2026-08-19 — revert to pay-immediately (supersedes ADR 0004 / the tokenization model)
+
+58. **Booking = paying in full at checkout again — no tokenization, no מסגרת-אשראי hold.** The client
+    decided (2026-08-19) to return to the original model: the customer **books and pays the full amount
+    immediately** at checkout. This **supersedes the 2026-08-16 tokenization model** — #46, #47, #48, #49,
+    #50 and [ADR 0004](./docs/adr/0004-tokenize-at-registration-charge-before-departure.md) are **no longer
+    in effect** — and **restores** #6, #30, #32, #37, #40 and [ADR 0002](./docs/adr/0002-cardcom-confirmation-model.md)
+    to full force. Paying-immediately is a **real charge, not a hold**, so the ">1-week credit-framework"
+    limit that motivated ADR 0004 does not apply (nothing is held). Concretely:
+    - **Lifecycle:** `held` → `confirmed` → `cancelled`/`expired`. The `reserved` state (#46) is **removed**;
+      `confirmed` again means **paid in full at checkout**, driven by the payment webhook (#37).
+    - **Receipt + confirmation at checkout, together** (reverts #48): the Cardcom `Document` block stays on
+      the `LowProfile/Create` checkout call (#36); no separate charge event issues the receipt.
+    - **No scheduled charge** (drops #47) and **no failed-charge machinery** (drops #49: token retry,
+      pay-now link, 2-day auto-release). A failed payment simply lets the hold expire (#21); `payments.status
+      = 'failed'` returns to **unused-in-v1** (#42), and the only automatic seat release is hold-timeout.
+    - **Refunds are calendar-based (#13)** (reverts #50): everyone has paid in full at booking, so a
+      **customer-cancel** refunds minus the #13 tier and a **company/departure-cancel** (weather / minimum /
+      force majeure) is a **full refund to all**. #50's "before-charge = nothing owed" zone no longer exists.
+    - **Amends #51/#52/#53/#57** (they stand except for the charge timing they assumed): admin-created
+      bookings (#51) charge **immediately**; the under-min escalation (#52) has **no charge boundary** (plain
+      calendar rungs, Stav's cancel = full refund to all); cancel-trip (#53) auto-refunds **all** bookings;
+      the in-app automation set (#57) **drops the D−14 charge job, charge-failed flow, and seat auto-release**,
+      keeping booking-confirmation + receipt (at checkout), the evening-before reminder, and the cancellation
+      message. #54 (reschedule removed) and #55/#56 (customers/consent) are unaffected.
+
+## 2026-08-19 — checkout consents: signed waiver + 3-box structure (grilling)
+
+59. **Three checkout consent boxes, and the risk waiver becomes a *signed*, versioned, per-Booking
+    consent.** Refines #27/#31 and reconciles #55/#33. Today two plain-boolean boxes
+    (`consent_policy`, `consent_risk`) collapse into a **single** `accepted_terms_at`/`terms_version`
+    pair; that becomes **three independent consents**:
+    1. **Cancellation-Policy consent — mandatory** (unchanged in spirit; the words link to
+       `/cancellation-policy`, #31). Recorded as `policy_accepted_at` + `policy_version`.
+    2. **Signed Waiver — mandatory *and signed*.** The risk/liability waiver is no longer a bare tick.
+       The booker **signs** it as a **basic electronic signature** (חוק חתימה אלקטרונית): a
+       click-to-sign acknowledgment that (a) references the **exact waiver version** accepted, (b) is
+       tied to the booker's already-captured identity (`registrant_name` + phone + email on the
+       booking — **no re-typing, no drawn image**), and (c) is timestamped. The legal weight is the
+       captured **who / which-version / when**, not a signature image. Recorded as `waiver_signed_at`
+       + `waiver_version`.
+       - **Per-Booking, booker signs under ייפוי-כוח.** One signature per Booking; the booker declares
+         authority to accept on behalf of **all** Participants (Participant stays a count — #27's
+         per-participant signing remains **deferred**; promote to a `*_consents` table only when it is
+         un-deferred). The waiver **text must carry an explicit ייפוי-כוח clause** — legal copy,
+         Ran-reviewed (pre-launch).
+    3. **Newsletter / Marketing Consent — optional.** This is the #55 Marketing Consent, **not** a
+       booking consent. It **lives on the Customer, never on the Booking** (confirms #33's
+       `blocked by #25`): a Customer-level, tracked-over-time state (opt-in/out + timestamp +
+       `source='checkout'`), **unticked by default** (#56), and it **never blocks booking**. We
+       explicitly **rejected** stashing the opt-in on the booking — that would put consent where #55
+       says it must not live.
+    - **Data model = flat columns on `bookings`.** Rejected a `booking_consents` table for v1:
+      per-participant is deferred (#27), so the table's only advantage is speculative (CLAUDE.md
+      "prefer a little duplication over the wrong abstraction"). Split the single
+      `accepted_terms_at`/`terms_version` into `policy_accepted_at`+`policy_version` and
+      `waiver_signed_at`+`waiver_version`. Marketing consent is **not** a booking column.
+    - **Versioning = two constants, git-frozen text.** `POLICY_VERSION` (renames today's
+      `c_terms_version`/`TERMS_VERSION`, still the cancellation-policy #13 text version) and a new
+      `WAIVER_VERSION`. The canonical **text** of each version lives git-tracked; a **released version
+      is frozen** — never edit its text in place, only bump the constant (otherwise a stored
+      `*_version` points at silently-changed text). Extends the #31 bump discipline to the waiver. No
+      `legal_documents` table in v1 (its natural upgrade if legal ever wants DB-served/admin-editable
+      text).
+    - **`book_trip` grows:** replace the single `p_accepted_terms` with the two mandatory assertions
+      (policy + waiver), both required to book; stamp the two timestamp/version pairs. Marketing opt-in
+      is written on the Customer path, not as a booking column.
+    - **Sequencing = Path B: Customer entity first, then all three boxes together.** Because marketing
+      consent must live on the Customer (#55/#33) and the `customers` table doesn't exist yet, build
+      **#25 (Customer entity) first** (it's unblocked), then land the checkout changes so all three
+      boxes ship together — the signed waiver **and** the newsletter opt-in wired to the Customer.
+      Built on a branch off `preview`, tracked through issues **#25 → #33 → (new: signed-waiver
+      capture)**.
 
 ## Open questions
 

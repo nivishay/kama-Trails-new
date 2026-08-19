@@ -36,26 +36,28 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
 
-## Tokenization payment model (ADR 0004 / DECISIONS #46–#52) — supersedes charge-at-checkout
+## ~~Tokenization payment model (ADR 0004 / DECISIONS #46–#52)~~ — SUPERSEDED (2026-08-19)
 
-- [ ] **Scheduled Charge job provisioned & running in production** — runs the stored Token at
-  `max(departure − 14 days, now)` (#47). This is the money-collection path; if the cron/edge
-  function isn't scheduled and monitored, **no one gets charged**. (Pairs with the existing
-  hold-expiry cron item above.)
-- [ ] **Failed-charge automation verified in production** (#49): token auto-retries → customer
-  pay-now link (immediate charge, inside 14d) → admin alert → **auto-release after ~2 days** if
-  unpaid, with admin notified. Confirm the ~2-day timer actually releases the seat and frees capacity.
-- [ ] **Registration call is tokenize-only; the `Document` (receipt) block moved onto the Charge
-  call** (#48) — verify the customer gets a **booking-confirmation** at registration (no receipt)
-  and the **חשבונית מס/קבלה only when the Charge runs**. Confirm registration copy does **not** say
-  "we saved your card" (Cardcom holds it; we hold only the Token).
-- [ ] **Confirm Cardcom supports the tokenize-then-charge-later flow** on Stav's terminal (token/
-  recurring-charge capability enabled; may be an account setting/add-on).
-- [ ] **Under-min pre-charge escalation fires before D−14** (≈D−21, #52) so Stav can cancel in the
-  free "before-charge" zone; verify timings (Stav-defined) and that cancel-trip auto-refunds the
-  already-charged bookings (#50).
-- [ ] **Confirm the Cardcom refund/זיכוי fee** (§1, e.g. ~10₪) and, if any, disclose it in the
-  customer cancellation message.
+> **Superseded by DECISIONS #58 — reverted to pay-immediately at checkout.** The tokenize-then-charge-later
+> model (ADR 0004) is no longer in effect, so the items that were here — scheduled D−14 Charge job,
+> failed-charge retry/pay-link/2-day auto-release, tokenize-only registration + receipt-on-charge, the
+> tokenize-capability terminal check, and the D−21 pre-charge under-min escalation — **no longer apply** and
+> are dropped. Payment is collected in full at checkout again (see the **Cardcom payment provider** section
+> below). One item survives (refunds still happen), moved here:
+
+- [ ] **Confirm the Cardcom refund/זיכוי fee** (e.g. ~10₪) and, if any, disclose it in the customer
+  cancellation message. Refunds are **admin-manual, calendar-tiered** (DECISIONS #13; refund model is #58,
+  not charge-state).
+
+## Checkout consents & signed waiver (DECISIONS #59) — legal
+
+- [ ] **Finalize the signed-waiver text** including an explicit **ייפוי-כוח clause** — the booker
+  declares authority to accept the waiver on behalf of **all** Participants (Participant is a count in
+  v1, #27). Have **Ran legal-review** it, then set the initial `WAIVER_VERSION`.
+- [ ] **Never mutate a released `POLICY_VERSION` / `WAIVER_VERSION` text in place — only bump the
+  constant.** A stored version ref (`policy_version` / `waiver_version` on the booking) must always
+  resolve to the exact text the customer signed; editing frozen text silently makes the stored ref
+  lie (DECISIONS #59, extends #31).
 
 ## Marketing consent & customer data (DECISIONS #55–#56) — legal
 
@@ -86,8 +88,10 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   configured to auto-issue a document per charge AND we pass `DocumentTypeToCreate`, the customer
   could get two documents. Verify against the live terminal; if it auto-issues, drop the explicit
   `DocumentTypeToCreate` (keep name/email so it's still addressed) — `src/lib/payments/cardcom/cardcom-provider.ts` (DECISIONS #36).
-- [ ] **Bump `TERMS_VERSION`** (currently `'2026-08-13'` in `book_trip`) if the cancellation-policy
-  (#13) text changes before launch — it stamps which policy version each customer agreed to (DECISIONS #31).
+- [ ] **Bump `POLICY_VERSION`** (the cancellation-policy version constant in `book_trip`, formerly
+  `TERMS_VERSION`/`c_terms_version = '2026-08-13'`; renamed by the #59 policy/waiver split) if the
+  cancellation-policy (#13) text changes before launch — it stamps which policy version each customer
+  agreed to (DECISIONS #31/#59).
 - [ ] **Confirm Cardcom's hosted-page session timeout** and set the seat-hold length to
   `session + buffer` (DECISIONS #32/#39; the ~30 min default is a guess until confirmed).
 - [ ] **Set `NEXT_PUBLIC_SITE_URL`** to the live origin (`https://kamatrails.co.il`) in Vercel —
