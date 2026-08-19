@@ -460,6 +460,54 @@ See [CONTEXT.md](./CONTEXT.md) for domain terms and [CLAUDE.md](./CLAUDE.md) for
       keeping booking-confirmation + receipt (at checkout), the evening-before reminder, and the cancellation
       message. #54 (reschedule removed) and #55/#56 (customers/consent) are unaffected.
 
+## 2026-08-19 — checkout consents: signed waiver + 3-box structure (grilling)
+
+59. **Three checkout consent boxes, and the risk waiver becomes a *signed*, versioned, per-Booking
+    consent.** Refines #27/#31 and reconciles #55/#33. Today two plain-boolean boxes
+    (`consent_policy`, `consent_risk`) collapse into a **single** `accepted_terms_at`/`terms_version`
+    pair; that becomes **three independent consents**:
+    1. **Cancellation-Policy consent — mandatory** (unchanged in spirit; the words link to
+       `/cancellation-policy`, #31). Recorded as `policy_accepted_at` + `policy_version`.
+    2. **Signed Waiver — mandatory *and signed*.** The risk/liability waiver is no longer a bare tick.
+       The booker **signs** it as a **basic electronic signature** (חוק חתימה אלקטרונית): a
+       click-to-sign acknowledgment that (a) references the **exact waiver version** accepted, (b) is
+       tied to the booker's already-captured identity (`registrant_name` + phone + email on the
+       booking — **no re-typing, no drawn image**), and (c) is timestamped. The legal weight is the
+       captured **who / which-version / when**, not a signature image. Recorded as `waiver_signed_at`
+       + `waiver_version`.
+       - **Per-Booking, booker signs under ייפוי-כוח.** One signature per Booking; the booker declares
+         authority to accept on behalf of **all** Participants (Participant stays a count — #27's
+         per-participant signing remains **deferred**; promote to a `*_consents` table only when it is
+         un-deferred). The waiver **text must carry an explicit ייפוי-כוח clause** — legal copy,
+         Ran-reviewed (pre-launch).
+    3. **Newsletter / Marketing Consent — optional.** This is the #55 Marketing Consent, **not** a
+       booking consent. It **lives on the Customer, never on the Booking** (confirms #33's
+       `blocked by #25`): a Customer-level, tracked-over-time state (opt-in/out + timestamp +
+       `source='checkout'`), **unticked by default** (#56), and it **never blocks booking**. We
+       explicitly **rejected** stashing the opt-in on the booking — that would put consent where #55
+       says it must not live.
+    - **Data model = flat columns on `bookings`.** Rejected a `booking_consents` table for v1:
+      per-participant is deferred (#27), so the table's only advantage is speculative (CLAUDE.md
+      "prefer a little duplication over the wrong abstraction"). Split the single
+      `accepted_terms_at`/`terms_version` into `policy_accepted_at`+`policy_version` and
+      `waiver_signed_at`+`waiver_version`. Marketing consent is **not** a booking column.
+    - **Versioning = two constants, git-frozen text.** `POLICY_VERSION` (renames today's
+      `c_terms_version`/`TERMS_VERSION`, still the cancellation-policy #13 text version) and a new
+      `WAIVER_VERSION`. The canonical **text** of each version lives git-tracked; a **released version
+      is frozen** — never edit its text in place, only bump the constant (otherwise a stored
+      `*_version` points at silently-changed text). Extends the #31 bump discipline to the waiver. No
+      `legal_documents` table in v1 (its natural upgrade if legal ever wants DB-served/admin-editable
+      text).
+    - **`book_trip` grows:** replace the single `p_accepted_terms` with the two mandatory assertions
+      (policy + waiver), both required to book; stamp the two timestamp/version pairs. Marketing opt-in
+      is written on the Customer path, not as a booking column.
+    - **Sequencing = Path B: Customer entity first, then all three boxes together.** Because marketing
+      consent must live on the Customer (#55/#33) and the `customers` table doesn't exist yet, build
+      **#25 (Customer entity) first** (it's unblocked), then land the checkout changes so all three
+      boxes ship together — the signed waiver **and** the newsletter opt-in wired to the Customer.
+      Built on a branch off `preview`, tracked through issues **#25 → #33 → (new: signed-waiver
+      capture)**.
+
 ## Open questions
 
 - [x] **Receipts/invoices (חשבונית מס/קבלה): RESOLVED → Cardcom issues them** (see #36). Supersedes the

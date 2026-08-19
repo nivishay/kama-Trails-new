@@ -97,6 +97,21 @@ _Avoid_: Seats, Slots, Places
 The tiered refund terms a customer accepts when booking: per-participant fees that grow closer to departure (50₪ at 5–6 days, 150₪ at 3–4 days, full cost within 48h), with full refund or free reschedule if the company cancels (too few registrants / force majeure / weather). See DECISIONS.md #13 for the canonical rule.
 _Avoid_: Refund rules
 
+**Booking Consents**:
+The two **mandatory** checkout consents a booker accepts to create a Booking — the **Cancellation-Policy
+consent** and the **Signed Waiver** — each recorded per Booking with its own version + timestamp
+(DECISIONS #59). Distinct from **Marketing Consent**, which is optional and lives on the Customer, not
+the Booking.
+_Avoid_: Terms, terms acceptance (vague — there are two, versioned separately)
+
+**Signed Waiver**:
+The mandatory risk/liability declaration the booker **signs** at checkout. Per-Booking: the booker
+signs once under **ייפוי-כוח**, declaring authority to accept on behalf of every Participant (Participant
+is a count in v1, #27). The "signature" is a **basic electronic signature** — a versioned acknowledgment
+tied to the booker's captured identity (name/phone/email) and a timestamp, referencing the exact waiver
+version — **not** a drawn image and **not** per-Participant.
+_Avoid_: Risk consent, liability checkbox (it is signed + versioned now, not a bare tick)
+
 **Reschedule**:
 _(Removed for now — DECISIONS #54.)_ Moving an existing Booking from its Departure to another date,
 without extra cost when the company caused the cancellation. Not built; the model stays ready for it.

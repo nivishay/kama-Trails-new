@@ -49,6 +49,16 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   cancellation message. Refunds are **admin-manual, calendar-tiered** (DECISIONS #13; refund model is #58,
   not charge-state).
 
+## Checkout consents & signed waiver (DECISIONS #59) — legal
+
+- [ ] **Finalize the signed-waiver text** including an explicit **ייפוי-כוח clause** — the booker
+  declares authority to accept the waiver on behalf of **all** Participants (Participant is a count in
+  v1, #27). Have **Ran legal-review** it, then set the initial `WAIVER_VERSION`.
+- [ ] **Never mutate a released `POLICY_VERSION` / `WAIVER_VERSION` text in place — only bump the
+  constant.** A stored version ref (`policy_version` / `waiver_version` on the booking) must always
+  resolve to the exact text the customer signed; editing frozen text silently makes the stored ref
+  lie (DECISIONS #59, extends #31).
+
 ## Marketing consent & customer data (DECISIONS #55–#56) — legal
 
 - [ ] **Imported customers default opted-OUT** and are excluded from the Newsletter audience; only
@@ -78,8 +88,10 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   configured to auto-issue a document per charge AND we pass `DocumentTypeToCreate`, the customer
   could get two documents. Verify against the live terminal; if it auto-issues, drop the explicit
   `DocumentTypeToCreate` (keep name/email so it's still addressed) — `src/lib/payments/cardcom/cardcom-provider.ts` (DECISIONS #36).
-- [ ] **Bump `TERMS_VERSION`** (currently `'2026-08-13'` in `book_trip`) if the cancellation-policy
-  (#13) text changes before launch — it stamps which policy version each customer agreed to (DECISIONS #31).
+- [ ] **Bump `POLICY_VERSION`** (the cancellation-policy version constant in `book_trip`, formerly
+  `TERMS_VERSION`/`c_terms_version = '2026-08-13'`; renamed by the #59 policy/waiver split) if the
+  cancellation-policy (#13) text changes before launch — it stamps which policy version each customer
+  agreed to (DECISIONS #31/#59).
 - [ ] **Confirm Cardcom's hosted-page session timeout** and set the seat-hold length to
   `session + buffer` (DECISIONS #32/#39; the ~30 min default is a guess until confirmed).
 - [ ] **Set `NEXT_PUBLIC_SITE_URL`** to the live origin (`https://kamatrails.co.il`) in Vercel —
