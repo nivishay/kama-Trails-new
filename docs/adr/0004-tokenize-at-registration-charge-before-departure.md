@@ -1,7 +1,13 @@
 # ADR 0004 — Tokenize at registration, charge ~14 days before departure
 
-Status: Accepted (2026-08-16 meeting; supersedes the "confirmed = paid at checkout" core of
-DECISIONS #6/#30/#32/#40 and amends ADR 0002)
+Status: **SUPERSEDED / REVERTED (2026-08-19) by DECISIONS #58** — the project reverted to
+**pay-immediately at checkout** (no card tokenization, no מסגרת-אשראי hold). This ADR is kept for the
+record; its model (tokenize-to-`reserved`, charge at `max(D−14, now)`, failed-charge retry/auto-release)
+is **not in effect**. DECISIONS #6/#30/#32/#37/#40 and ADR 0002 are restored — the charge is collected in
+full at checkout again.
+
+_Original status: Accepted (2026-08-16 meeting; superseded the "confirmed = paid at checkout" core of
+DECISIONS #6/#30/#32/#40 and amended ADR 0002)._
 
 ## Context
 The client cannot hold a credit-card framework (מסגרת אשראי) for more than about a week, so the

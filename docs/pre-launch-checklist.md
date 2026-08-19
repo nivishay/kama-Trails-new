@@ -36,26 +36,18 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
 
-## Tokenization payment model (ADR 0004 / DECISIONS #46–#52) — supersedes charge-at-checkout
+## ~~Tokenization payment model (ADR 0004 / DECISIONS #46–#52)~~ — SUPERSEDED (2026-08-19)
 
-- [ ] **Scheduled Charge job provisioned & running in production** — runs the stored Token at
-  `max(departure − 14 days, now)` (#47). This is the money-collection path; if the cron/edge
-  function isn't scheduled and monitored, **no one gets charged**. (Pairs with the existing
-  hold-expiry cron item above.)
-- [ ] **Failed-charge automation verified in production** (#49): token auto-retries → customer
-  pay-now link (immediate charge, inside 14d) → admin alert → **auto-release after ~2 days** if
-  unpaid, with admin notified. Confirm the ~2-day timer actually releases the seat and frees capacity.
-- [ ] **Registration call is tokenize-only; the `Document` (receipt) block moved onto the Charge
-  call** (#48) — verify the customer gets a **booking-confirmation** at registration (no receipt)
-  and the **חשבונית מס/קבלה only when the Charge runs**. Confirm registration copy does **not** say
-  "we saved your card" (Cardcom holds it; we hold only the Token).
-- [ ] **Confirm Cardcom supports the tokenize-then-charge-later flow** on Stav's terminal (token/
-  recurring-charge capability enabled; may be an account setting/add-on).
-- [ ] **Under-min pre-charge escalation fires before D−14** (≈D−21, #52) so Stav can cancel in the
-  free "before-charge" zone; verify timings (Stav-defined) and that cancel-trip auto-refunds the
-  already-charged bookings (#50).
-- [ ] **Confirm the Cardcom refund/זיכוי fee** (§1, e.g. ~10₪) and, if any, disclose it in the
-  customer cancellation message.
+> **Superseded by DECISIONS #58 — reverted to pay-immediately at checkout.** The tokenize-then-charge-later
+> model (ADR 0004) is no longer in effect, so the items that were here — scheduled D−14 Charge job,
+> failed-charge retry/pay-link/2-day auto-release, tokenize-only registration + receipt-on-charge, the
+> tokenize-capability terminal check, and the D−21 pre-charge under-min escalation — **no longer apply** and
+> are dropped. Payment is collected in full at checkout again (see the **Cardcom payment provider** section
+> below). One item survives (refunds still happen), moved here:
+
+- [ ] **Confirm the Cardcom refund/זיכוי fee** (e.g. ~10₪) and, if any, disclose it in the customer
+  cancellation message. Refunds are **admin-manual, calendar-tiered** (DECISIONS #13; refund model is #58,
+  not charge-state).
 
 ## Marketing consent & customer data (DECISIONS #55–#56) — legal
 
