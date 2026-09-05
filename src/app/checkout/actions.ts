@@ -14,7 +14,10 @@ interface CheckoutInput {
   phone: string;
   email: string;
   participants: number;
-  acceptedTerms: boolean;
+  // Two mandatory booking consents (#31/#59); marketing is the optional newsletter opt-in (#33/#55).
+  acceptedPolicy: boolean;
+  signedWaiver: boolean;
+  marketingOptIn: boolean;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,9 +29,11 @@ function parseCheckoutForm(formData: FormData): CheckoutInput {
   const phone = String(formData.get("phone") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const participants = Number(formData.get("participants"));
-  // Both consents are mandatory (#31): the risk waiver and the cancellation policy.
+  // Two mandatory booking consents (#31/#59): the cancellation policy and the signed waiver.
   const acceptedPolicy = formData.get("consent_policy") === "on";
-  const acceptedRisk = formData.get("consent_risk") === "on";
+  const signedWaiver = formData.get("consent_waiver") === "on";
+  // Optional newsletter opt-in (#33/#55) — never blocks booking; unticked = not opted in.
+  const marketingOptIn = formData.get("consent_marketing") === "on";
 
   if (!departureId) throw new Error("חסר מזהה יציאה");
   if (!registrantName) throw new Error("יש להזין שם מלא");
@@ -37,8 +42,8 @@ function parseCheckoutForm(formData: FormData): CheckoutInput {
   if (!Number.isInteger(participants) || participants < 1) {
     throw new Error("יש לבחור לפחות משתתף אחד");
   }
-  if (!acceptedPolicy || !acceptedRisk) {
-    throw new Error("יש לאשר את שני התנאים כדי להמשיך");
+  if (!acceptedPolicy || !signedWaiver) {
+    throw new Error("יש לאשר את שני התנאים ולחתום על ההצהרה כדי להמשיך");
   }
 
   return {
@@ -47,7 +52,9 @@ function parseCheckoutForm(formData: FormData): CheckoutInput {
     phone,
     email,
     participants,
-    acceptedTerms: true,
+    acceptedPolicy,
+    signedWaiver,
+    marketingOptIn,
   };
 }
 
@@ -67,7 +74,9 @@ async function createHeldBooking(input: CheckoutInput): Promise<HeldBooking> {
     p_phone: input.phone,
     p_email: input.email,
     p_participants_count: input.participants,
-    p_accepted_terms: input.acceptedTerms,
+    p_accept_policy: input.acceptedPolicy,
+    p_sign_waiver: input.signedWaiver,
+    p_marketing_opt_in: input.marketingOptIn,
   });
   if (error) throw new Error(error.message);
 

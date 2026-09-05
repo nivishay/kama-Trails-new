@@ -67,15 +67,25 @@ export async function createDeparture({
   return { trail, departure: data as Departure };
 }
 
-/** A valid book_trip call over the anon (public) path. */
-export function book(departureId: string, participants = 1, acceptedTerms = true) {
+/**
+ * A valid book_trip call over the anon (public) path. `acceptedTerms` drives both mandatory
+ * consents (policy + signed waiver); `marketingOptIn` is the optional newsletter box (#59).
+ */
+export function book(
+  departureId: string,
+  participants = 1,
+  acceptedTerms = true,
+  marketingOptIn = false,
+) {
   return anon.rpc('book_trip', {
     p_departure_id: departureId,
     p_registrant_name: 'בודק',
     p_phone: '050-0000000',
     p_email: 'test@example.com',
     p_participants_count: participants,
-    p_accepted_terms: acceptedTerms,
+    p_accept_policy: acceptedTerms,
+    p_sign_waiver: acceptedTerms,
+    p_marketing_opt_in: marketingOptIn,
   });
 }
 

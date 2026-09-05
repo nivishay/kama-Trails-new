@@ -2,10 +2,10 @@ import { test, expect } from "@playwright/test";
 
 // The crown-jewel customer journey: browse a trail, register for a date, "pay" (fake provider),
 // and land on a confirmed booking. Booking UI + the checkout→confirm path are exercised end to
-// end; only the external Cardcom call is faked (ADR 0003). Seed: trail "nahal-kziv" with one open
-// departure three weeks out (supabase/seed.sql), so the date is always bookable.
-const TRAIL_SLUG = "nahal-kziv";
-const TRAIL_NAME = "שביל נחל כזיב";
+// end; only the external Cardcom call is faked (ADR 0003). Seed: every real trail gets one open
+// departure three weeks out (supabase/seed.sql `current_date + 21`), so the date is always bookable.
+const TRAIL_SLUG = "nahal-gilbon";
+const TRAIL_NAME = "טיול סנפלינג רטוב בנחל ג'ילבון";
 
 test("a visitor books a trail date and reaches a confirmed booking", async ({
   page,
@@ -21,7 +21,9 @@ test("a visitor books a trail date and reaches a confirmed booking", async ({
   await page.locator('input[name="registrant_name"]').fill("בודק אוטומטי");
   await page.locator('input[name="phone"]').fill("050-0000000");
   await page.locator('input[name="email"]').fill("e2e@example.com");
-  // Both consents are mandatory (#31): the cancellation policy and the risk waiver.
+  // Three consent boxes (#59): cancellation policy + signed waiver are mandatory, the
+  // newsletter opt-in is optional. Ticking all satisfies the two mandatory ones (and opts
+  // this smoke-test booker into marketing, which is harmless here).
   for (const consent of await page.getByRole("checkbox").all()) {
     await consent.check();
   }
