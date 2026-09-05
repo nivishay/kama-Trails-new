@@ -11,6 +11,8 @@ import {
   LogOut,
   Map as MapIcon,
   Mountain,
+  Sparkles,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,6 +30,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "לוח בקרה", icon: LayoutDashboard, exact: true },
   { href: "/admin/departures", label: "יציאות", icon: CalendarDays },
   { href: "/admin/bookings", label: "הזמנות", icon: ClipboardList },
+  { href: "/admin/customers", label: "לקוחות", icon: Users },
+  { href: "/admin/private-trips/new", label: "טיול פרטי", icon: Sparkles },
   { href: "/admin", label: "מסלולים", icon: MapIcon, disabled: true },
   { href: "/admin", label: "פניות", icon: Inbox, disabled: true },
 ];

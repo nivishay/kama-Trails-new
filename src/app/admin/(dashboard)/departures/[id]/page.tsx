@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getDepartureById, getTrailOptions } from "@/lib/admin/departures";
+import { utcIsoToIsraelWallTime } from "@/lib/format/timezone";
 import { updateDeparture } from "../actions";
 import { DepartureForm } from "../departure-form";
 
@@ -27,7 +28,12 @@ export default async function EditDeparturePage({
       <DepartureForm
         action={updateDeparture}
         trails={trails}
-        initial={departure}
+        initial={{
+          ...departure,
+          registration_closes_at: utcIsoToIsraelWallTime(
+            departure.registration_closes_at,
+          ),
+        }}
         submitLabel="שמור שינויים"
       />
     </div>

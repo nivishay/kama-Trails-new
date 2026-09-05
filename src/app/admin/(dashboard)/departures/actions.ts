@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { israelWallTimeToUtcIso } from "@/lib/format/timezone";
 import type { DepartureStatus } from "@/lib/catalog/types";
 
 const DEPARTURES_PATH = "/admin/departures";
@@ -19,6 +20,7 @@ interface DepartureInput {
   min_capacity: number;
   max_capacity: number;
   status: DepartureStatus;
+  registration_closes_at: string | null;
 }
 
 /** Parse + validate the form fields; throws a Hebrew message on invalid input. */
@@ -30,6 +32,8 @@ function parseDepartureForm(formData: FormData): DepartureInput {
   const minCapacity = Number(formData.get("min_capacity"));
   const maxCapacity = Number(formData.get("max_capacity"));
   const status = String(formData.get("status") ?? "open") as DepartureStatus;
+  // Optional earlier public-registration deadline (#24/#53). Empty = use the default (start time).
+  const closesAtLocal = String(formData.get("registration_closes_at") ?? "").trim();
 
   if (!trail_id) throw new Error("יש לבחור מסלול");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("תאריך לא תקין");
@@ -44,6 +48,9 @@ function parseDepartureForm(formData: FormData): DepartureInput {
     throw new Error("מינימום המשתתפים גדול מהקיבולת המרבית");
   }
   if (!STATUSES.includes(status)) throw new Error("סטטוס לא תקין");
+  if (closesAtLocal && israelWallTimeToUtcIso(closesAtLocal) === null) {
+    throw new Error("מועד סגירת ההרשמה לא תקין");
+  }
 
   return {
     trail_id,
@@ -53,6 +60,9 @@ function parseDepartureForm(formData: FormData): DepartureInput {
     min_capacity: minCapacity,
     max_capacity: maxCapacity,
     status,
+    registration_closes_at: closesAtLocal
+      ? israelWallTimeToUtcIso(closesAtLocal)
+      : null,
   };
 }
 
@@ -83,6 +93,29 @@ export async function createDeparture(
 
   revalidatePath(DEPARTURES_PATH);
   redirect(DEPARTURES_PATH);
+}
+
+/**
+ * Quick open/close toggle for a departure's public registration (#24/#53). `closed` stops
+ * public sales but the trip still runs; admin actions stay unbounded by it. Does not touch
+ * cancelled departures. Revalidates in place (no redirect — the toggle lives on the list).
+ */
+export async function setDepartureStatus(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "").trim();
+  const next = String(formData.get("status") ?? "").trim() as DepartureStatus;
+  if (!id || (next !== "open" && next !== "closed")) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("departures")
+    .update({ status: next })
+    .eq("id", id)
+    .neq("status", "cancelled");
+  if (error) {
+    throw new Error(`שינוי סטטוס ההרשמה נכשל: ${error.message}`);
+  }
+
+  revalidatePath(DEPARTURES_PATH);
 }
 
 export async function updateDeparture(

@@ -36,6 +36,24 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
 
+## Admin manage-actions, private trips & pay-links (DECISIONS #51/#53, issues #24/#32)
+
+- [ ] **Apply the two new migrations to the cloud DBs** (Preview `kama_trails_preview`, then
+  main `kama_trails`) via MCP before deploy — authored locally only this session (agent was
+  told author-files-only): `20260905120000_departure_registration_deadline.sql` and
+  `20260905140000_admin_private_trip_bookings.sql`.
+- [ ] **Revisit the 7-day admin pay-link hold window** (`c_admin_hold_days` in
+  `20260905140000_admin_private_trip_bookings.sql`). Admin-created bookings hold the seat for 7
+  days so the pay-link stays valid; the seat auto-releases only on hold-timeout (#58). Confirm 7
+  days is the right pay-window for private trips / late adds, and that a lapsed pay-link's seat
+  release is acceptable (no notification is sent on expiry in v1).
+- [ ] **Verify private (unlisted) departures never leak into the public catalog** — excluded by
+  `is_private` in `list_availability`; confirm they also stay out of any sitemap/SEO surface at
+  cutover, while still linking to the trail's public page (DECISIONS #51).
+- [ ] **Registration-deadline default = departure start time**, computed in Asia/Jerusalem
+  (`departure_effective_close`); when `departure_time` is absent/unparseable it falls back to end
+  of the departure day. Confirm this matches Stav's expectation before launch (DECISIONS #53).
+
 ## ~~Tokenization payment model (ADR 0004 / DECISIONS #46–#52)~~ — SUPERSEDED (2026-08-19)
 
 > **Superseded by DECISIONS #58 — reverted to pay-immediately at checkout.** The tokenize-then-charge-later

@@ -22,6 +22,8 @@ export interface DepartureFormValues {
   min_capacity?: number;
   max_capacity?: number;
   status?: DepartureStatus;
+  /** Israel-local wall time ("YYYY-MM-DDTHH:MM") for the deadline input; "" = use default. */
+  registration_closes_at?: string;
 }
 
 const fieldClass =
@@ -152,6 +154,18 @@ export function DepartureForm({
             </option>
           ))}
         </select>
+      </Field>
+
+      <Field label="סגירת הרשמה מוקדמת (לא חובה)">
+        <input
+          type="datetime-local"
+          name="registration_closes_at"
+          defaultValue={initial?.registration_closes_at ?? ""}
+          className={fieldClass}
+        />
+        <span className="block text-xs text-muted-foreground">
+          ברירת מחדל: ההרשמה נסגרת אוטומטית בשעת היציאה. ניתן להקדים כאן.
+        </span>
       </Field>
 
       {state.error && (
