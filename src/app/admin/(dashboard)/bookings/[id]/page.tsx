@@ -9,6 +9,7 @@ import {
 import { formatHebrewWeekday, formatTrailDate } from "@/lib/format/date";
 import { formatPrice } from "@/lib/format/price";
 import { BookingStatusBadge } from "../booking-status-badge";
+import { LateAddForm } from "../late-add-form";
 
 /** Paid state + receipt link + the "paid but not confirmed" anomaly flag (#43). */
 function PaymentCell({ payment }: { payment: BookingPayment }) {
@@ -88,6 +89,10 @@ export default async function DepartureBookingsPage({
         <span className="text-sm text-muted-foreground">
           {bookings.length} הזמנות · קיבולת {header.max_capacity}
         </span>
+      </div>
+
+      <div className="mt-4">
+        <LateAddForm departureId={id} />
       </div>
 
       {bookings.length === 0 ? (

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Pencil, Users } from "lucide-react";
+import { Plus, Pencil, Users, Lock } from "lucide-react";
 import { getAdminDepartures } from "@/lib/admin/departures";
 import type { DepartureStatus } from "@/lib/catalog/types";
 import { capacityLabel } from "@/lib/catalog/availability";
@@ -10,6 +10,7 @@ import {
 } from "@/lib/format/date";
 import { formatPrice } from "@/lib/format/price";
 import { Button } from "@/components/ui/button";
+import { setDepartureStatus } from "./actions";
 
 const STATUS_STYLES: Record<
   DepartureStatus,
@@ -28,6 +29,30 @@ function StatusBadge({ status }: { status: DepartureStatus }) {
     >
       {style.label}
     </span>
+  );
+}
+
+/** Toggle public registration on/off (#24). Hidden for cancelled/past departures. */
+function RegistrationToggle({
+  id,
+  status,
+}: {
+  id: string;
+  status: DepartureStatus;
+}) {
+  const next = status === "open" ? "closed" : "open";
+  const label = status === "open" ? "סגור הרשמה" : "פתח הרשמה";
+  return (
+    <form action={setDepartureStatus}>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="status" value={next} />
+      <button
+        type="submit"
+        className="text-sm font-medium text-muted-foreground hover:text-ink"
+      >
+        {label}
+      </button>
+    </form>
   );
 }
 
@@ -91,12 +116,27 @@ export default async function DeparturesPage() {
                       </div>
                     </td>
                     <td className={CELL}>{departure.departure_time ?? "—"}</td>
-                    <td className={CELL}>{departure.trail_name}</td>
+                    <td className={CELL}>
+                      <div className="flex items-center gap-1.5">
+                        {departure.trail_name}
+                        {departure.is_private && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                            <Lock className="size-3" />
+                            פרטי
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className={CELL}>{formatPrice(departure.price)}</td>
                     <td className={CELL}>{capacityLabel(departure)}</td>
                     <td className={CELL}>{departure.min_capacity}</td>
                     <td className={CELL}>
                       <StatusBadge status={departure.status} />
+                      {departure.public_closed && (
+                        <div className="mt-0.5 text-[10px] text-muted-foreground">
+                          סגור לציבור (עבר המועד)
+                        </div>
+                      )}
                     </td>
                     <td className={CELL}>
                       <div className="flex items-center gap-3">
@@ -114,6 +154,12 @@ export default async function DeparturesPage() {
                           <Users className="size-3.5" />
                           הזמנות
                         </Link>
+                        {!past && departure.status !== "cancelled" && (
+                          <RegistrationToggle
+                            id={departure.id}
+                            status={departure.status}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

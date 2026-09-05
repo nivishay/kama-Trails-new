@@ -166,6 +166,68 @@ export async function getBooking(bookingId: string) {
   return data;
 }
 
+// A signed-in ADMIN client (auth.uid() set + profiles.role='admin'), for the admin-only RPCs
+// (list_departures_admin, admin_create_booking). Provisioned once via the service-role Admin
+// API and reused, so is_admin() is genuinely true rather than bypassed by service_role.
+let adminSessionPromise: Promise<SupabaseClient> | undefined;
+
+export function adminSession(): Promise<SupabaseClient> {
+  adminSessionPromise ??= (async () => {
+    const email = `admin-${randomUUID().slice(0, 8)}@example.com`;
+    const password = randomUUID();
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (createError) throw new Error(`create admin user failed: ${createError.message}`);
+
+    const { error: promoteError } = await admin
+      .from('profiles')
+      .update({ role: 'admin' })
+      .eq('id', created.user!.id);
+    if (promoteError) throw new Error(`promote admin failed: ${promoteError.message}`);
+
+    const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
+    const { error: signInError } = await client.auth.signInWithPassword({ email, password });
+    if (signInError) throw new Error(`admin sign-in failed: ${signInError.message}`);
+    return client;
+  })();
+  return adminSessionPromise;
+}
+
+/** Create a private (unlisted) departure of a fresh trail, for the private-trip path (#32). */
+export async function createPrivateDeparture(price = 250): Promise<{
+  trail: Trail;
+  departure: Departure;
+}> {
+  const trail = await createTrail(price);
+  const { data, error } = await admin
+    .from('departures')
+    .insert({
+      trail_id: trail.id,
+      date: '2026-12-20',
+      departure_time: randomUUID().slice(0, 8),
+      price,
+      max_capacity: 10,
+      status: 'closed',
+      is_private: true,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(`createPrivateDeparture failed: ${error.message}`);
+  return { trail, departure: data as Departure };
+}
+
+/** Force a departure's public registration deadline into the past (auto-close). */
+export async function closeRegistrationDeadline(departureId: string): Promise<void> {
+  const { error } = await admin
+    .from('departures')
+    .update({ registration_closes_at: new Date(Date.now() - 60_000).toISOString() })
+    .eq('id', departureId);
+  if (error) throw new Error(`closeRegistrationDeadline failed: ${error.message}`);
+}
+
 /** Sum of seats actually occupying capacity (confirmed + unexpired-held), read directly. */
 export async function occupiedSeats(departureId: string): Promise<number> {
   const { data, error } = await admin
