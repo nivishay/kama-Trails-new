@@ -38,11 +38,13 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   `sign_booking_consents`) also reject a lapsed hold so it can't be paid in the race window. Still
   to verify **live**: that `pg_cron` is enabled on the cloud DB and the `expire-stale-holds` job
   is actually firing (`select * from cron.job;` / `cron.job_run_details`)._
-- [ ] **Apply `20260906120000_expire_stale_holds.sql` to the cloud DBs** (Preview
+- [x] **Apply `20260906120000_expire_stale_holds.sql` to the cloud DBs** (Preview
   `kama_trails_preview`, then main `kama_trails`) via MCP before deploy, and **confirm `pg_cron`
   installs there** — the migration's schedule step is wrapped in a `do … exception` block so it
   no-ops where `pg_cron` can't load, which means a silent no-schedule is possible; verify the job
-  exists after applying (#61).
+  exists after applying (#61). _Done: applied to both cloud DBs; `pg_cron` installed and the
+  `expire-stale-holds` job is scheduled (`* * * * *`) on both. Still to observe live: the job
+  actually firing (`cron.job_run_details`) once real bookings exist._
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
 
