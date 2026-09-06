@@ -31,8 +31,18 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   uses `HOLD_MINUTES = 40` (migration `20260813120000_cardcom_payment_confirm.sql`)._ The
   **value 40 is provisional** — still gated on confirming Cardcom's real session timeout (see
   the "Confirm Cardcom's hosted-page session timeout" item below); adjust the constant there.
-- [ ] Verify the seat-hold expiry (`HOLD_MINUTES`, DECISIONS #44) actually releases holds and
-  frees capacity in production (cron/edge function scheduled and running).
+- [~] Verify the seat-hold expiry (`HOLD_MINUTES`, DECISIONS #44) actually releases holds and
+  frees capacity in production (cron scheduled and running). _Built (#61): `expire_stale_holds()`
+  flips lapsed `held` → `expired`, scheduled every minute via **pg_cron**
+  (`20260906120000_expire_stale_holds.sql`). The pre-payment guards (`attach_payment_session`,
+  `sign_booking_consents`) also reject a lapsed hold so it can't be paid in the race window. Still
+  to verify **live**: that `pg_cron` is enabled on the cloud DB and the `expire-stale-holds` job
+  is actually firing (`select * from cron.job;` / `cron.job_run_details`)._
+- [ ] **Apply `20260906120000_expire_stale_holds.sql` to the cloud DBs** (Preview
+  `kama_trails_preview`, then main `kama_trails`) via MCP before deploy, and **confirm `pg_cron`
+  installs there** — the migration's schedule step is wrapped in a `do … exception` block so it
+  no-ops where `pg_cron` can't load, which means a silent no-schedule is possible; verify the job
+  exists after applying (#61).
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
 
