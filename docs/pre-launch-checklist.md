@@ -139,6 +139,12 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   against a deployed preview (test card in DECISIONS #29).
 - [ ] Verify webhook **idempotency** under Cardcom retries in production (the
   `UNIQUE(provider, provider_ref)` on `payments` must make a retry a no-op, DECISIONS #38).
+- [ ] **Review the verbose Cardcom response logging before launch.** `CardcomProvider.post`
+  logs every Cardcom response (`console.info("[cardcom] … response", data)`,
+  `src/lib/payments/cardcom/cardcom-provider.ts`) to diagnose the checkout/charge path. The
+  `GetLpResult` / receipt blocks can carry **customer PII**, so gate it to non-production (or
+  redact to `ResponseCode`/`Description` only) before going live — the rest of the payments code
+  deliberately logs booking-id-only (`[cardcom-webhook]`). Added as a temporary debugging aid.
 - [ ] **`PAYMENT_PROVIDER=fake` must be unset (and inert) in production.** The CI flow test
   uses a `FakePaymentProvider` that confirms bookings without a real charge (ADR 0003); it is
   hard-blocked on production deployments (`VERCEL_ENV === "production"` in
