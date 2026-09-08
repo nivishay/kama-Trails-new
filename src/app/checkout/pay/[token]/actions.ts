@@ -18,6 +18,7 @@ interface TokenBooking {
   registrant_name: string;
   email: string;
   deposit_amount: number;
+  hold_expires_at: string | null;
 }
 
 export async function payBooking(
@@ -49,6 +50,13 @@ export async function payBooking(
     }
     if (booking.status !== "held") {
       return { error: "ההזמנה כבר שולמה או שאינה זמינה לתשלום" };
+    }
+    // A hold whose window lapsed may still read "held" until the expiry sweep runs (#61); the
+    // seat is already released, so refuse to charge it here rather than after taking money.
+    const holdExpired =
+      !booking.hold_expires_at || new Date(booking.hold_expires_at) <= new Date();
+    if (holdExpired) {
+      return { error: "פג תוקף שמירת המקום. פנו אלינו כדי לחדש את ההזמנה." };
     }
 
     // Record the mandatory consents on the held booking (token-guarded), then charge in full.
