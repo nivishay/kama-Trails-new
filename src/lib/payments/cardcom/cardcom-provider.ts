@@ -127,10 +127,16 @@ export class CardcomProvider implements PaymentProvider {
       body: JSON.stringify(body),
     });
     if (!response.ok) {
+      console.error(`[cardcom] ${path} — HTTP ${response.status}`);
       throw new Error(
         `Cardcom request to ${path} failed with HTTP ${response.status}`,
       );
     }
-    return (await response.json()) as T;
+    const data = (await response.json()) as T;
+    // Log Cardcom's raw response so checkout/charge failures are diagnosable from server logs.
+    // Server-side only; the receipt/transaction blocks can carry customer PII — see the
+    // pre-launch checklist to gate this to non-production before launch.
+    console.info(`[cardcom] ${path} response`, data);
+    return data;
   }
 }
