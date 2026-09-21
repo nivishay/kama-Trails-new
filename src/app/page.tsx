@@ -3,9 +3,10 @@ import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Users, Baby, Building2 } from "lucide-react";
 import { getDeparturesForTrail, getTrails } from "@/lib/catalog";
 import { nextUpcomingDeparture } from "@/lib/catalog/availability";
-import { trailImageUrl } from "@/lib/catalog/trail-image";
+import { tripPhotosPublicUrl } from "@/lib/catalog/trail-image";
 import { Button } from "@/components/ui/button";
 import { TrailCard } from "@/components/catalog/trail-card";
+import { HeroVideo } from "@/components/home/hero-video";
 
 const AUDIENCE_FEATURES = [
   { Icon: Users, label: "משפחות וקבוצות פרטיות" },
@@ -13,23 +14,35 @@ const AUDIENCE_FEATURES = [
   { Icon: Building2, label: "ארגונים ובתי ספר" },
 ];
 
-// Fixed homepage hero (a rappel shot in Keshet Cave), independent of trail order.
-// Stored as a relative trip_photos path; resolved per-environment at render time.
-const HOME_HERO_IMAGE =
-  "keshet-cave/10409645_831951950190766_3874715981567035470_n.jpg";
+// Fixed homepage hero, independent of trail order. Stored as relative
+// trip_photos paths under `_site/`; resolved per-environment at render time.
+// The video (drone shots from second 36 of the source clip) plays muted on
+// loop; the poster frame is the still fallback (reduced motion / load / no env).
+const HOME_HERO_VIDEO = "_site/home-hero.mp4";
+const HOME_HERO_POSTER = "_site/home-hero-poster.jpg";
 
-function Hero({ backgroundImage }: { backgroundImage?: string | null }) {
+function Hero({
+  videoSrc,
+  posterSrc,
+}: {
+  videoSrc?: string | null;
+  posterSrc?: string | null;
+}) {
   return (
     <section className="relative flex min-h-[560px] items-center overflow-hidden text-ink-foreground">
-      {backgroundImage && (
-        <Image
-          src={backgroundImage}
-          alt=""
-          fill
-          sizes="100vw"
-          className="z-0 object-cover"
-          priority
-        />
+      {videoSrc ? (
+        <HeroVideo src={videoSrc} poster={posterSrc ?? undefined} />
+      ) : (
+        posterSrc && (
+          <Image
+            src={posterSrc}
+            alt=""
+            fill
+            sizes="100vw"
+            className="z-0 object-cover"
+            priority
+          />
+        )
       )}
       <div className="absolute inset-0 z-10 bg-gradient-to-l from-ink/85 via-ink/50 to-ink/30" />
       <div className="relative z-20 mx-auto w-full max-w-6xl px-4 text-right">
@@ -80,7 +93,10 @@ export default async function HomePage() {
 
   return (
     <div>
-      <Hero backgroundImage={trailImageUrl(HOME_HERO_IMAGE)} />
+      <Hero
+        videoSrc={tripPhotosPublicUrl(HOME_HERO_VIDEO)}
+        posterSrc={tripPhotosPublicUrl(HOME_HERO_POSTER)}
+      />
 
       <section className="border-b border-border bg-muted/40">
         <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-3">
