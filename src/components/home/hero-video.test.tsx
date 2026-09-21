@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 import { render } from "@testing-library/react";
 import { HeroVideo } from "./hero-video";
 
@@ -15,12 +23,13 @@ function mockMatchMedia(reduced: boolean) {
 }
 
 describe("HeroVideo", () => {
-  let play: ReturnType<typeof vi.fn>;
+  let play: MockInstance<() => Promise<void>>;
 
   beforeEach(() => {
     // jsdom does not implement media playback; stub it so the effect can run.
-    play = vi.fn().mockResolvedValue(undefined);
-    HTMLMediaElement.prototype.play = play;
+    play = vi
+      .spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValue(undefined);
   });
 
   afterEach(() => {
