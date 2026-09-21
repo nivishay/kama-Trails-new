@@ -5,6 +5,8 @@
 export interface CardcomEnv {
   terminalNumber: number;
   apiName: string;
+  /** Refund-only credential (Transactions/RefundByTransactionId); absent when refunds aren't configured. */
+  apiPassword: string | null;
 }
 
 function requireServerEnv(name: string): string {
@@ -29,5 +31,11 @@ export function readCardcomEnv(): CardcomEnv {
     );
   }
 
-  return { terminalNumber, apiName: requireServerEnv("CARDCOM_API_NAME") };
+  return {
+    terminalNumber,
+    apiName: requireServerEnv("CARDCOM_API_NAME"),
+    // Optional at read time so checkout keeps working without it; the refund path requires it and
+    // fails loudly (CardcomProvider.refund) if it wasn't configured.
+    apiPassword: process.env.CARDCOM_API_PASSWORD ?? null,
+  };
 }

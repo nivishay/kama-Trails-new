@@ -74,11 +74,13 @@ export async function getBookingsForDeparture(
   const bookings = (data ?? []) as unknown as BookingRow[];
   if (bookings.length === 0) return [];
 
-  // One succeeded payment per booking in v1 (#42); read the ledger for paid state + receipt ref.
+  // Read the ledger for paid state + receipt ref. Only charge rows carry the receipt — refund
+  // rows (kind='refund') must never be mistaken for the payment that issued the חשבונית (#22).
   const { data: paymentData, error: paymentError } = await supabase
     .from("payments")
     .select("booking_id, document_number, document_url")
     .eq("status", "succeeded")
+    .in("kind", ["deposit", "balance"])
     .in(
       "booking_id",
       bookings.map((booking) => booking.id),
@@ -145,6 +147,90 @@ export async function getDepartureBookingCounts(): Promise<
     counts.set(row.departure_id, current);
   }
   return counts;
+}
+
+/** Everything the admin cancel/refund flow needs about one booking (DECISIONS #13/#15). */
+export interface BookingCancelInfo {
+  id: string;
+  registrant_name: string;
+  participants_count: number;
+  status: BookingStatus;
+  /** Departure calendar date (authoritative, from the departure), "YYYY-MM-DD". */
+  departure_date: string;
+  /** Net money received = Σ succeeded (deposit+balance) − Σ succeeded refunds. */
+  amountPaid: number;
+  /** The succeeded charge's provider transaction id to refund against, or null if never charged. */
+  chargeProviderRef: string | null;
+}
+
+interface CancelBookingRow {
+  id: string;
+  registrant_name: string;
+  participants_count: number;
+  status: BookingStatus;
+  departures: { date: string } | null;
+}
+
+interface LedgerRow {
+  kind: "deposit" | "balance" | "refund";
+  amount: number;
+  provider_ref: string | null;
+}
+
+/**
+ * Load a single booking plus its payment ledger, reduced to the paid amount and the charge txn to
+ * refund against. Admin-only (RLS). Returns null if the booking does not exist.
+ */
+export async function getBookingCancelInfo(
+  bookingId: string,
+): Promise<BookingCancelInfo | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(
+      "id, registrant_name, participants_count, status, departures(date)",
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load booking ${bookingId}: ${error.message}`);
+  }
+  if (!data) return null;
+  const booking = data as unknown as CancelBookingRow;
+
+  const { data: ledgerData, error: ledgerError } = await supabase
+    .from("payments")
+    .select("kind, amount, provider_ref")
+    .eq("booking_id", bookingId)
+    .eq("status", "succeeded");
+
+  if (ledgerError) {
+    throw new Error(`Failed to load payments: ${ledgerError.message}`);
+  }
+  const ledger = (ledgerData ?? []) as unknown as LedgerRow[];
+
+  let amountPaid = 0;
+  let chargeProviderRef: string | null = null;
+  for (const row of ledger) {
+    if (row.kind === "refund") {
+      amountPaid -= row.amount;
+    } else {
+      amountPaid += row.amount;
+      // Refund against the most recent charge that carries a provider transaction id.
+      if (row.provider_ref) chargeProviderRef = row.provider_ref;
+    }
+  }
+
+  return {
+    id: booking.id,
+    registrant_name: booking.registrant_name,
+    participants_count: booking.participants_count,
+    status: booking.status,
+    departure_date: booking.departures?.date ?? "",
+    amountPaid: Math.max(0, amountPaid),
+    chargeProviderRef,
+  };
 }
 
 /** Header info for a single departure's bookings page. */

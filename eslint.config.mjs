@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Reference material, not source: scraped old site, POC/design exports (generated third-party
+    // bundles that trip lint — e.g. the Claude Design `_ds` bundle).
+    "meetings_docs/**",
+    // Scratch git worktrees (full repo copies); never our source to lint.
+    ".claude/**",
   ]),
 ]);
 

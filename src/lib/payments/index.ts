@@ -9,6 +9,8 @@ export type {
   PaymentDocument,
   PaymentProvider,
   PaymentResult,
+  RefundRequest,
+  RefundResult,
 } from "./types";
 export { CardcomProvider } from "./cardcom/cardcom-provider";
 export { FakePaymentProvider } from "./fake/fake-provider";
@@ -38,5 +40,6 @@ export function getPaymentProvider(): PaymentProvider {
   return new CardcomProvider({
     terminalNumber: env.terminalNumber,
     apiName: env.apiName,
+    apiPassword: env.apiPassword,
   });
 }

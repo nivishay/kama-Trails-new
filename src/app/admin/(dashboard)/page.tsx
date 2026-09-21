@@ -1,39 +1,26 @@
 import type { Route } from "next";
 import Link from "next/link";
 import {
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
-  ChevronLeft,
   Inbox,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { getAdminStats } from "@/lib/admin/stats";
+import { getDashboardData, type DashboardDeparture } from "@/lib/admin/dashboard";
+import { formatHebrewWeekday, formatTrailDate } from "@/lib/format/date";
+import { formatPrice } from "@/lib/format/price";
+import { Button } from "@/components/ui/button";
+import { MonthCalendar } from "./month-calendar";
+
+const UPCOMING_CARD_LIMIT = 6;
 
 interface Stat {
   label: string;
   value: number;
   icon: LucideIcon;
 }
-
-interface QuickLink {
-  title: string;
-  description: string;
-  href: Route;
-}
-
-const QUICK_LINKS: QuickLink[] = [
-  {
-    title: "יציאות",
-    description: "הוספה ועריכה של תאריכים, קיבולת ומחיר.",
-    href: "/admin/departures",
-  },
-  {
-    title: "הזמנות",
-    description: "צפייה בהזמנות לפי יציאה.",
-    href: "/admin/bookings",
-  },
-];
 
 function StatTile({ stat }: { stat: Stat }) {
   return (
@@ -49,59 +36,179 @@ function StatTile({ stat }: { stat: Stat }) {
   );
 }
 
-export default async function AdminDashboardPage() {
-  const stats = await getAdminStats();
+/** Capacity bar: occupied seats over capacity, coloured by state. */
+function CapacityBar({ departure }: { departure: DashboardDeparture }) {
+  const pct = Math.min(
+    100,
+    Math.round((departure.booked / Math.max(1, departure.max_capacity)) * 100),
+  );
+  const color =
+    departure.free_spots <= 0
+      ? "bg-ink"
+      : departure.belowMinimum
+        ? "bg-amber-400"
+        : "bg-primary";
+  return (
+    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+function UpcomingCard({ departure }: { departure: DashboardDeparture }) {
+  return (
+    <div className="rounded-xl border border-border bg-background p-4">
+      <div className="text-xs font-semibold uppercase text-muted-foreground">
+        {formatHebrewWeekday(departure.date)} · {formatTrailDate(departure.date)}
+      </div>
+      <div className="mt-1 font-bold text-ink">{departure.trail_name}</div>
+      <div className="text-xs text-muted-foreground">
+        {departure.departure_time ? `${departure.departure_time} · ` : ""}
+        {formatPrice(departure.price)} לאדם
+      </div>
+      <div className="mt-3">
+        <CapacityBar departure={departure} />
+      </div>
+      <div className="mt-1.5 flex justify-between text-xs">
+        <span>
+          <b>{departure.booked}</b>/{departure.max_capacity} משתתפים
+          {departure.belowMinimum
+            ? ` · חסרים ${departure.min_capacity - departure.booked}`
+            : ""}
+        </span>
+        <Link
+          href={`/admin/bookings/${departure.id}` as Route}
+          className="font-medium text-primary hover:underline"
+        >
+          נרשמים
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/** Parse a `?month=YYYY-MM` param to the first day of that month; falls back to the current month. */
+function parseMonth(param: string | undefined, now: Date): Date {
+  const match = /^(\d{4})-(\d{2})$/.exec(param ?? "");
+  if (match) {
+    const month = Number(match[2]) - 1;
+    if (month >= 0 && month <= 11) return new Date(Number(match[1]), month, 1);
+  }
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const now = new Date();
+  const { month } = await searchParams;
+  const monthDate = parseMonth(month, now);
+  const { stats, upcoming, attentionBelowMinimum, all } = await getDashboardData();
 
   const tiles: Stat[] = [
-    {
-      label: "יציאות קרובות",
-      value: stats.upcomingDepartures,
-      icon: CalendarDays,
-    },
-    {
-      label: "הזמנות מאושרות",
-      value: stats.confirmedBookings,
-      icon: CheckCircle2,
-    },
-    {
-      label: "משתתפים מאושרים",
-      value: stats.confirmedParticipants,
-      icon: Users,
-    },
+    { label: "יציאות קרובות", value: stats.upcomingDepartures, icon: CalendarDays },
+    { label: "הזמנות מאושרות", value: stats.confirmedBookings, icon: CheckCircle2 },
+    { label: "משתתפים מאושרים", value: stats.confirmedParticipants, icon: Users },
     { label: "פניות חדשות", value: stats.newLeads, icon: Inbox },
   ];
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-ink">לוח בקרה</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        סקירה מהירה של הפעילות.
-      </p>
+  const attentionCount = attentionBelowMinimum.length + (stats.newLeads > 0 ? 1 : 0);
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-ink">לוח בקרה</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {upcoming.length} יציאות קרובות · {attentionCount} דברים דורשים טיפול
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/private-trips/new">טיול פרטי</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/admin/departures/new">+ יציאה חדשה</Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map((tile) => (
           <StatTile key={tile.label} stat={tile} />
         ))}
       </div>
 
-      <h2 className="mt-10 text-lg font-bold text-ink">קיצורי דרך</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {QUICK_LINKS.map((link) => (
-          <Link
-            key={link.title}
-            href={link.href}
-            className="group flex items-center justify-between rounded-xl border border-border bg-background p-5 transition-colors hover:border-primary/40"
-          >
-            <div>
-              <h3 className="font-semibold text-ink">{link.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {link.description}
-              </p>
-            </div>
-            <ChevronLeft className="size-5 text-muted-foreground transition-transform group-hover:-translate-x-1" />
-          </Link>
-        ))}
-      </div>
+      {attentionCount > 0 && (
+        <section>
+          <h2 className="mb-3 text-lg font-bold text-ink">דורש טיפול</h2>
+          <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-background">
+            {attentionBelowMinimum.map((departure) => (
+              <div
+                key={departure.id}
+                className="flex items-center gap-3 p-4"
+              >
+                <AlertTriangle className="size-5 shrink-0 text-amber-500" />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-ink">
+                    מתחת למינימום · {departure.trail_name}{" "}
+                    {formatTrailDate(departure.date)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {departure.booked} מתוך {departure.min_capacity} · חסרים{" "}
+                    {departure.min_capacity - departure.booked}
+                  </div>
+                </div>
+                <Link
+                  href={`/admin/bookings/${departure.id}` as Route}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  פתח
+                </Link>
+              </div>
+            ))}
+            {stats.newLeads > 0 && (
+              <div className="flex items-center gap-3 p-4">
+                <Inbox className="size-5 shrink-0 text-primary" />
+                <div className="flex-1 text-sm font-semibold text-ink">
+                  {stats.newLeads} פניות חדשות
+                </div>
+                <Link
+                  href="/admin/leads"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  לפניות
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {upcoming.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-lg font-bold text-ink">היציאות הקרובות</h2>
+            <Link
+              href="/admin/departures"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              כל היציאות
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {upcoming.slice(0, UPCOMING_CARD_LIMIT).map((departure) => (
+              <UpcomingCard key={departure.id} departure={departure} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="rounded-xl border border-border bg-background p-4">
+        <MonthCalendar departures={all} monthDate={monthDate} today={now} />
+      </section>
     </div>
   );
 }

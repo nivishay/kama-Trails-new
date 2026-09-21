@@ -47,6 +47,11 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   actually firing (`cron.job_run_details`) once real bookings exist._
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
+- [x] **Apply `20260921130000_close_past_departures.sql` to the cloud DBs.** Flips past `open`
+  departures to `closed` (daily pg_cron + one-time backfill), so trips that already ran stop
+  reading as open. _Applied to **both** Preview `kama_trails_preview` and main `kama_trails`
+  (backfilled — 16 past departures closed in prod; `close-past-departures` job scheduled
+  `5 0 * * *`, pg_cron confirmed on both)._
 
 ## Admin manage-actions, private trips & pay-links (DECISIONS #51/#53, issues #24/#32)
 
@@ -78,6 +83,24 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] **Confirm the Cardcom refund/זיכוי fee** (e.g. ~10₪) and, if any, disclose it in the customer
   cancellation message. Refunds are **admin-manual, calendar-tiered** (DECISIONS #13; refund model is #58,
   not charge-state).
+
+### Admin cancel/refund flow (DECISIONS #13/#15/#53) — built this session
+
+- [x] **Apply `20260921120000_admin_cancel_and_refund.sql` to the cloud DBs** (adds the
+  `admin_cancel_booking` RPC). _Applied to **both** Preview `kama_trails_preview` and main
+  `kama_trails` (verified: RPC present, security-definer, admin-only guard fires)._
+- [ ] **Set `CARDCOM_API_PASSWORD` in Vercel prod env.** The refund endpoint
+  (`Transactions/RefundByTransactionId`) authenticates with ApiName + ApiPassword — unlike checkout.
+  `CardcomProvider.refund` throws loudly if it's missing, so a cancel-with-refund will fail until it's
+  set (`src/lib/payments/cardcom/env.ts`, `cardcom-provider.ts`).
+- [ ] **Verify the refund response's transaction-id field against the live Cardcom terminal.** The
+  public v11 swagger doesn't pin `RefundByTransactionIdResp`'s field name; `refund()` reads
+  `NewTranzactionId ?? TranzactionId` (`src/lib/payments/cardcom/wire-types.ts`). Confirm the real
+  field so the refund's `provider_ref` is recorded, and adjust if Cardcom uses another name.
+- [ ] **End-to-end sandbox refund** once a preview with real sandbox creds exists: cancel a paid
+  booking and confirm Cardcom returns the money + a `kind='refund'` row lands in `payments`.
+- [ ] **Partial-cancel (design 2c) deferred** — dropping *some* participants from a booking is not in
+  the decided action set (#53); revisit only if Stav needs it. Tracked in `docs/admin-redesign-plan.md`.
 
 ## Checkout consents & signed waiver (DECISIONS #59) — legal
 

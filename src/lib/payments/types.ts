@@ -46,9 +46,27 @@ export interface PaymentResult {
   document: PaymentDocument | null;
 }
 
+/** Ask the provider to return money for a prior charge (DECISIONS #15 — admin, manual). */
+export interface RefundRequest {
+  /** The original succeeded charge's provider transaction id (`payments.provider_ref`). */
+  providerRef: string;
+  /** Amount to return, in shekels. May be less than the original charge (a partial refund). */
+  amount: number;
+}
+
+/** Normalized outcome of a refund attempt. */
+export interface RefundResult {
+  /** True only when the provider confirmed the money was returned. */
+  success: boolean;
+  /** The refund transaction's id at the provider, when one was returned. */
+  providerRef: string | null;
+}
+
 export interface PaymentProvider {
   /** Open a hosted-page payment session for a booking. Maps to Cardcom LowProfile/Create. */
   createCheckout(request: CheckoutRequest): Promise<CheckoutSession>;
   /** Pull the authoritative result of a session. Maps to Cardcom LowProfile/GetLpResult. */
   getResult(sessionId: string): Promise<PaymentResult>;
+  /** Return money for a prior charge. Maps to Cardcom Transactions/RefundByTransactionId. */
+  refund(request: RefundRequest): Promise<RefundResult>;
 }

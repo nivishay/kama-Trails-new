@@ -33,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/customers", label: "לקוחות", icon: Users },
   { href: "/admin/private-trips/new", label: "טיול פרטי", icon: Sparkles },
   { href: "/admin", label: "מסלולים", icon: MapIcon, disabled: true },
-  { href: "/admin", label: "פניות", icon: Inbox, disabled: true },
+  { href: "/admin/leads", label: "פניות", icon: Inbox },
 ];
 
 function isActive(pathname: string, item: NavItem): boolean {

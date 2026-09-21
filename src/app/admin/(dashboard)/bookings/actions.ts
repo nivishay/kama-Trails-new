@@ -5,6 +5,8 @@ import {
   createAdminBooking,
   toAdminBookingMessage,
 } from "@/lib/admin/admin-created-bookings";
+import { cancelBookingWithRefund } from "@/lib/admin/cancel-booking";
+import type { CancellationReason } from "@/lib/admin/cancellation";
 
 // Add a late Participant to an existing departure after public sales closed (#32/#51). Same
 // admin-created booking primitive as a private trip; capacity-guarded, unbounded by the
@@ -46,5 +48,43 @@ export async function addLateParticipant(
     return { payLink, customerName: name };
   } catch (error) {
     return { error: toAdminBookingMessage((error as Error).message) };
+  }
+}
+
+// Admin-cancel a single booking (2a): refund paid − #13 fee (customer_request) or a full refund
+// (departure_cancelled, #58), record it, flip the booking to cancelled. See cancelBookingWithRefund.
+export type CancelBookingState = {
+  error?: string;
+  done?: boolean;
+  refundAmount?: number;
+};
+
+const CANCEL_REASONS: CancellationReason[] = [
+  "customer_request",
+  "departure_cancelled",
+];
+
+export async function cancelBookingAction(
+  _prev: CancelBookingState,
+  formData: FormData,
+): Promise<CancelBookingState> {
+  const bookingId = String(formData.get("booking_id") ?? "").trim();
+  const departureId = String(formData.get("departure_id") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  if (!bookingId) return { error: "חסר מזהה הזמנה" };
+  if (!CANCEL_REASONS.includes(reason as CancellationReason)) {
+    return { error: "יש לבחור סיבת ביטול" };
+  }
+
+  try {
+    const { refundAmount } = await cancelBookingWithRefund(
+      bookingId,
+      reason as CancellationReason,
+    );
+    if (departureId) revalidatePath(`/admin/bookings/${departureId}`);
+    return { done: true, refundAmount };
+  } catch (error) {
+    return { error: (error as Error).message };
   }
 }

@@ -3,6 +3,8 @@ import type {
   CheckoutSession,
   PaymentProvider,
   PaymentResult,
+  RefundRequest,
+  RefundResult,
 } from "../types";
 
 // An in-app, stateless fake of the PaymentProvider contract for CI/dev flow tests (ADR 0003).
@@ -73,6 +75,15 @@ export class FakePaymentProvider implements PaymentProvider {
       // Must equal the booking's deposit_amount or the confirm path rejects on amount-mismatch (#37).
       amount: decoded.amount,
       document: null,
+    };
+  }
+
+  // Never moves money: reports success so the admin cancel/refund flow (and its tests/CI) run
+  // end-to-end without a real Cardcom call. Deterministic ref so a re-run stays idempotent.
+  async refund(request: RefundRequest): Promise<RefundResult> {
+    return {
+      success: true,
+      providerRef: `${SESSION_PREFIX}-refund-${request.providerRef}`,
     };
   }
 }
