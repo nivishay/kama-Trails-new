@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Mountain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -39,7 +39,13 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted px-4">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <Mountain className="size-8 text-primary" />
+          <Image
+            src="/logo-mark.png"
+            alt=""
+            width={80}
+            height={82}
+            className="h-12 w-auto"
+          />
           <h1 className="text-xl font-bold text-ink">כניסת מנהל</h1>
           <p className="text-sm text-muted-foreground">שבילי קמה — ניהול</p>
         </div>
