@@ -79,6 +79,25 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   cancellation message. Refunds are **admin-manual, calendar-tiered** (DECISIONS #13; refund model is #58,
   not charge-state).
 
+### Admin cancel/refund flow (DECISIONS #13/#15/#53) — built this session
+
+- [~] **Apply `20260921120000_admin_cancel_and_refund.sql` to the cloud DBs** (adds the
+  `admin_cancel_booking` RPC). _Applied to Preview `kama_trails_preview` this session (verified: RPC
+  present, security-definer, admin-only guard fires). **Still to apply to main `kama_trails`** at
+  merge/cutover, via MCP._
+- [ ] **Set `CARDCOM_API_PASSWORD` in Vercel prod env.** The refund endpoint
+  (`Transactions/RefundByTransactionId`) authenticates with ApiName + ApiPassword — unlike checkout.
+  `CardcomProvider.refund` throws loudly if it's missing, so a cancel-with-refund will fail until it's
+  set (`src/lib/payments/cardcom/env.ts`, `cardcom-provider.ts`).
+- [ ] **Verify the refund response's transaction-id field against the live Cardcom terminal.** The
+  public v11 swagger doesn't pin `RefundByTransactionIdResp`'s field name; `refund()` reads
+  `NewTranzactionId ?? TranzactionId` (`src/lib/payments/cardcom/wire-types.ts`). Confirm the real
+  field so the refund's `provider_ref` is recorded, and adjust if Cardcom uses another name.
+- [ ] **End-to-end sandbox refund** once a preview with real sandbox creds exists: cancel a paid
+  booking and confirm Cardcom returns the money + a `kind='refund'` row lands in `payments`.
+- [ ] **Partial-cancel (design 2c) deferred** — dropping *some* participants from a booking is not in
+  the decided action set (#53); revisit only if Stav needs it. Tracked in `docs/admin-redesign-plan.md`.
+
 ## Checkout consents & signed waiver (DECISIONS #59) — legal
 
 - [ ] **Finalize the signed-waiver text** including an explicit **ייפוי-כוח clause** — the booker

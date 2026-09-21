@@ -7,6 +7,21 @@
 finish, don't grow scope. Two parts: (A) a hybrid dashboard, (B) the cancel/refund
 actions layer (launch-blocking, but already decided — see below).
 
+## Build status (2026-09-21) — implemented on `feat/admin-redesign-plan`
+
+- ✅ **§0 corrections** — status badge labels were already correct; no dead-model strings in `src`.
+- ✅ **Part A hybrid dashboard** — needs-attention (below-minimum), upcoming cards, month calendar
+  (`src/lib/admin/dashboard.ts`, `month-calendar.tsx`, rewritten `(dashboard)/page.tsx`).
+- ✅ **Leads inbox** — `/admin/leads` + status transitions; `פניות` nav enabled.
+- ✅ **Fee calculator** — `src/lib/admin/cancellation.ts` (+ 15 unit tests).
+- ✅ **Cardcom `refund()`** — provider contract + Cardcom (`RefundByTransactionId`) + fake (+ tests).
+- ✅ **Cancel flows (2a/2b)** — `admin_cancel_booking` RPC + orchestration + UI + integration test.
+- **DB:** RPC applied to **Preview** (`kama_trails_preview`) and verified; **prod `kama_trails`
+  pending** at merge (see `docs/pre-launch-checklist.md`).
+- **Deferred (not in scope):** partial-cancel 2c (not in #53); dashboard hold-expiry/anomaly
+  attention rows (below-minimum + leads shipped); calendar month-navigation (current month only).
+- **Prod launch gate:** set `CARDCOM_API_PASSWORD`; verify the refund response field name.
+
 ---
 
 ## 0. The design was drawn against a deleted model — correct it first
