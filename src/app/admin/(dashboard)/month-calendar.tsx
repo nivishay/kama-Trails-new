@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Route } from "next";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { DashboardDeparture } from "@/lib/admin/dashboard";
 
-// A static, current-month calendar (design 1c). Server-rendered from the departures list — no
-// interactivity in v1 (month navigation is a later enhancement). The month is the high-level view;
-// each day carries a chip per departure, colour-coded by state.
+// The month calendar (design 1c). Server-rendered from the departures list; month navigation is
+// driven by a `?month=YYYY-MM` URL param so it stays a server component (no client state). Each
+// day carries a chip per departure, colour-coded by state.
 
 const HEBREW_WEEKDAYS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 const MONTH_FORMAT = new Intl.DateTimeFormat("he-IL", {
@@ -18,6 +19,11 @@ function isoOf(year: number, month: number, day: number): string {
   const mm = String(month + 1).padStart(2, "0");
   const dd = String(day).padStart(2, "0");
   return `${year}-${mm}-${dd}`;
+}
+
+/** "YYYY-MM" param for a month, used by the prev/next links. */
+function monthParam(year: number, month: number): string {
+  return `${year}-${String(month + 1).padStart(2, "0")}`;
 }
 
 /** A leading-null-padded list of day numbers for the month grid (null = blank cell). */
@@ -41,14 +47,20 @@ function chipClass(departure: DashboardDeparture): string {
 
 export function MonthCalendar({
   departures,
-  now = new Date(),
+  monthDate,
+  today = new Date(),
 }: {
   departures: DashboardDeparture[];
-  now?: Date;
+  /** First day of the month to display. */
+  monthDate: Date;
+  /** Actual "now", so the today-marker only shows when viewing the current month. */
+  today?: Date;
 }) {
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const today = now.getDate();
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const isCurrentMonth =
+    today.getFullYear() === year && today.getMonth() === month;
+  const todayDate = today.getDate();
 
   const byDate = new Map<string, DashboardDeparture[]>();
   for (const departure of departures) {
@@ -59,10 +71,30 @@ export function MonthCalendar({
 
   const cells = monthCells(year, month);
   const monthLabel = MONTH_FORMAT.format(new Date(Date.UTC(year, month, 1)));
+  const prevHref = `/admin?month=${monthParam(month === 0 ? year - 1 : year, (month + 11) % 12)}#calendar` as Route;
+  const nextHref = `/admin?month=${monthParam(month === 11 ? year + 1 : year, (month + 1) % 12)}#calendar` as Route;
 
   return (
-    <div dir="rtl">
-      <h2 className="text-lg font-bold text-ink">{monthLabel}</h2>
+    <div dir="rtl" id="calendar">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-ink">{monthLabel}</h2>
+        <div className="flex gap-1">
+          <Link
+            href={prevHref}
+            aria-label="חודש קודם"
+            className="flex size-8 items-center justify-center rounded-lg border border-border hover:bg-muted"
+          >
+            <ChevronRight className="size-4" />
+          </Link>
+          <Link
+            href={nextHref}
+            aria-label="חודש הבא"
+            className="flex size-8 items-center justify-center rounded-lg border border-border hover:bg-muted"
+          >
+            <ChevronLeft className="size-4" />
+          </Link>
+        </div>
+      </div>
 
       <div className="mt-3 overflow-x-auto">
         <div className="min-w-[560px]">
@@ -84,7 +116,7 @@ export function MonthCalendar({
               }
               const iso = isoOf(year, month, day);
               const dayDepartures = byDate.get(iso) ?? [];
-              const isToday = day === today;
+              const isToday = isCurrentMonth && day === todayDate;
               return (
                 <div key={iso} className="min-h-24 bg-background p-1.5">
                   <div

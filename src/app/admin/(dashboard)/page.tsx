@@ -87,7 +87,24 @@ function UpcomingCard({ departure }: { departure: DashboardDeparture }) {
   );
 }
 
-export default async function AdminDashboardPage() {
+/** Parse a `?month=YYYY-MM` param to the first day of that month; falls back to the current month. */
+function parseMonth(param: string | undefined, now: Date): Date {
+  const match = /^(\d{4})-(\d{2})$/.exec(param ?? "");
+  if (match) {
+    const month = Number(match[2]) - 1;
+    if (month >= 0 && month <= 11) return new Date(Number(match[1]), month, 1);
+  }
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const now = new Date();
+  const { month } = await searchParams;
+  const monthDate = parseMonth(month, now);
   const { stats, upcoming, attentionBelowMinimum, all } = await getDashboardData();
 
   const tiles: Stat[] = [
@@ -190,7 +207,7 @@ export default async function AdminDashboardPage() {
       )}
 
       <section className="rounded-xl border border-border bg-background p-4">
-        <MonthCalendar departures={all} />
+        <MonthCalendar departures={all} monthDate={monthDate} today={now} />
       </section>
     </div>
   );
