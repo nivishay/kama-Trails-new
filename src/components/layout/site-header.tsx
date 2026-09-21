@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Mountain, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { NAV_LINKS, SITE_NAME } from "@/lib/site";
 import { SocialLinks } from "./social-links";
 import { cn } from "@/lib/utils";
@@ -22,7 +23,14 @@ function Logo() {
       className="flex items-center gap-2 font-bold text-ink"
       aria-label={SITE_NAME}
     >
-      <Mountain className="size-7 text-primary" />
+      <Image
+        src="/logo-mark.png"
+        alt=""
+        width={80}
+        height={82}
+        className="h-9 w-auto"
+        priority
+      />
       <span className="text-lg">{SITE_NAME}</span>
     </Link>
   );

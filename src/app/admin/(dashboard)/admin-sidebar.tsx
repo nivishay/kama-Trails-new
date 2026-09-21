@@ -1,6 +1,7 @@
 "use client";
 
 import type { Route } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,7 +11,6 @@ import {
   LayoutDashboard,
   LogOut,
   Map as MapIcon,
-  Mountain,
   Sparkles,
   Users,
   type LucideIcon,
@@ -92,7 +92,13 @@ function NavLinks({ pathname }: { pathname: string }) {
 function Brand() {
   return (
     <div className="flex items-center gap-2 font-bold text-ink">
-      <Mountain className="size-6 text-primary" />
+      <Image
+        src="/logo-mark.png"
+        alt=""
+        width={80}
+        height={82}
+        className="h-7 w-auto"
+      />
       <span>ניהול · שבילי קמה</span>
     </div>
   );
