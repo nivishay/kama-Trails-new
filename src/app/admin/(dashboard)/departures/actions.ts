@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cancelDepartureWithRefunds } from "@/lib/admin/cancel-booking";
 import { israelWallTimeToUtcIso } from "@/lib/format/timezone";
 import type { DepartureStatus } from "@/lib/catalog/types";
 
@@ -116,6 +117,33 @@ export async function setDepartureStatus(formData: FormData): Promise<void> {
   }
 
   revalidatePath(DEPARTURES_PATH);
+}
+
+// Cancel a whole departure (2b): full refund to every active booking (#58), then mark it
+// cancelled. Revalidates both the departures list and the departure's bookings page.
+export type CancelDepartureState = {
+  error?: string;
+  done?: boolean;
+  cancelledBookings?: number;
+  totalRefunded?: number;
+};
+
+export async function cancelDepartureAction(
+  _prev: CancelDepartureState,
+  formData: FormData,
+): Promise<CancelDepartureState> {
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { error: "חסר מזהה יציאה" };
+
+  try {
+    const { cancelledBookings, totalRefunded } =
+      await cancelDepartureWithRefunds(id);
+    revalidatePath(DEPARTURES_PATH);
+    revalidatePath(`/admin/bookings/${id}`);
+    return { done: true, cancelledBookings, totalRefunded };
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
 }
 
 export async function updateDeparture(

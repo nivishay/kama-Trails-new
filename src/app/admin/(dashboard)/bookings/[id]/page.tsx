@@ -10,6 +10,8 @@ import { formatHebrewWeekday, formatTrailDate } from "@/lib/format/date";
 import { formatPrice } from "@/lib/format/price";
 import { BookingStatusBadge } from "../booking-status-badge";
 import { LateAddForm } from "../late-add-form";
+import { CancelBookingDialog } from "../cancel-booking-dialog";
+import { CancelDepartureButton } from "../cancel-departure-button";
 
 /** Paid state + receipt link + the "paid but not confirmed" anomaly flag (#43). */
 function PaymentCell({ payment }: { payment: BookingPayment }) {
@@ -60,6 +62,10 @@ export default async function DepartureBookingsPage({
     notFound();
   }
 
+  const activeBookings = bookings.filter(
+    (booking) => booking.status !== "cancelled" && booking.status !== "expired",
+  ).length;
+
   return (
     <div>
       <Link
@@ -86,9 +92,17 @@ export default async function DepartureBookingsPage({
             )}
           </div>
         </div>
-        <span className="text-sm text-muted-foreground">
-          {bookings.length} הזמנות · קיבולת {header.max_capacity}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">
+            {bookings.length} הזמנות · קיבולת {header.max_capacity}
+          </span>
+          {header.status !== "cancelled" && activeBookings > 0 && (
+            <CancelDepartureButton
+              departureId={id}
+              activeBookings={activeBookings}
+            />
+          )}
+        </div>
       </div>
 
       <div className="mt-4">
@@ -112,6 +126,7 @@ export default async function DepartureBookingsPage({
                 <th className={HEAD}>סטטוס</th>
                 <th className={HEAD}>תשלום</th>
                 <th className={HEAD}>נרשם</th>
+                <th className={HEAD}></th>
               </tr>
             </thead>
             <tbody>
@@ -153,6 +168,21 @@ export default async function DepartureBookingsPage({
                     className={`${CELL} whitespace-nowrap text-muted-foreground`}
                   >
                     {DATETIME_FORMAT.format(new Date(booking.created_at))}
+                  </td>
+                  <td className={CELL}>
+                    {booking.status !== "cancelled" &&
+                      booking.status !== "expired" && (
+                        <CancelBookingDialog
+                          bookingId={booking.id}
+                          departureId={id}
+                          registrantName={booking.registrant_name}
+                          participants={booking.participants_count}
+                          amountPaid={
+                            booking.payment.paid ? booking.total_amount : 0
+                          }
+                          departureDate={header.date}
+                        />
+                      )}
                   </td>
                 </tr>
               ))}

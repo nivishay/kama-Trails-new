@@ -18,6 +18,7 @@ function makeProvider(result: Partial<PaymentResult>): PaymentProvider {
   return {
     createCheckout: vi.fn(),
     getResult: vi.fn(async () => full),
+    refund: vi.fn(),
   };
 }
 

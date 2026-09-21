@@ -14,10 +14,14 @@ function stubFetch(payload: unknown, { ok = true, status = 200 } = {}) {
   );
 }
 
-function makeProvider(fetchFn: ReturnType<typeof stubFetch>) {
+function makeProvider(
+  fetchFn: ReturnType<typeof stubFetch>,
+  apiPassword?: string,
+) {
   return new CardcomProvider({
     terminalNumber: 1000,
     apiName: "test-api-name",
+    apiPassword,
     baseUrl: "https://cardcom.test",
     fetchFn: fetchFn as unknown as typeof fetch,
   });
@@ -154,6 +158,57 @@ describe("CardcomProvider.getResult", () => {
 
     const result = await makeProvider(fetchFn).getResult("lp-1");
     expect(result.document).toBeNull();
+  });
+});
+
+describe("CardcomProvider.refund", () => {
+  it("posts a RefundByTransactionId body with the txn id, exact PartialSum, and ApiPassword", async () => {
+    const fetchFn = stubFetch({ ResponseCode: 0, NewTranzactionId: 555 });
+    const result = await makeProvider(fetchFn, "secret-pass").refund({
+      providerRef: "987654",
+      amount: 390,
+    });
+
+    const [url] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(
+      "https://cardcom.test/api/v11/Transactions/RefundByTransactionId",
+    );
+    expect(bodyOf(fetchFn)).toEqual({
+      ApiName: "test-api-name",
+      ApiPassword: "secret-pass",
+      TransactionId: 987654, // provider_ref text → integer
+      PartialSum: 390, // refund exactly paid − fee
+      AllowMultipleRefunds: false,
+    });
+    expect(result).toEqual({ success: true, providerRef: "555" });
+  });
+
+  it("throws when no refund credential is configured", async () => {
+    const fetchFn = stubFetch({ ResponseCode: 0 });
+    await expect(
+      makeProvider(fetchFn).refund({ providerRef: "987654", amount: 100 }),
+    ).rejects.toThrow(/CARDCOM_API_PASSWORD/);
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it("throws when Cardcom rejects the refund", async () => {
+    const fetchFn = stubFetch({ ResponseCode: 6, Description: "already refunded" });
+    await expect(
+      makeProvider(fetchFn, "secret-pass").refund({
+        providerRef: "987654",
+        amount: 100,
+      }),
+    ).rejects.toThrow(/RefundByTransactionId failed.*already refunded/);
+  });
+
+  it("refuses a provider_ref that is not a transaction id", async () => {
+    const fetchFn = stubFetch({ ResponseCode: 0 });
+    await expect(
+      makeProvider(fetchFn, "secret-pass").refund({
+        providerRef: "fake-booking-1", // e.g. a fake-provider ref, never Cardcom
+        amount: 100,
+      }),
+    ).rejects.toThrow(/not a Cardcom transaction id/);
   });
 });
 

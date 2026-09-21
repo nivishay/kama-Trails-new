@@ -62,3 +62,26 @@ export interface CardcomDocumentInfo {
   DocumentNumber?: number;
   DocumentUrl?: string;
 }
+
+/**
+ * Request body for POST /api/v11/Transactions/RefundByTransactionId. Unlike LowProfile/Create
+ * (API-name auth), the refund endpoint authenticates with ApiName + ApiPassword. `PartialSum`
+ * refunds an exact amount (we always set it so the refund equals paid − cancellation fee).
+ */
+export interface CardcomRefundRequest {
+  ApiName: string;
+  ApiPassword: string;
+  TransactionId: number;
+  PartialSum: number;
+  AllowMultipleRefunds: boolean;
+}
+
+/** Response body from POST /api/v11/Transactions/RefundByTransactionId. */
+export interface CardcomRefundResponse {
+  ResponseCode: number;
+  Description?: string;
+  // The refund's own transaction id. Cardcom's exact field name here is not pinned in the public
+  // swagger (see pre-launch checklist); accept the casings the API is known to use.
+  NewTranzactionId?: number;
+  TranzactionId?: number;
+}

@@ -3,16 +3,21 @@ import type {
   CheckoutSession,
   PaymentProvider,
   PaymentResult,
+  RefundRequest,
+  RefundResult,
 } from "../types";
 import type {
   CardcomCreateRequest,
   CardcomCreateResponse,
   CardcomLowProfileResult,
+  CardcomRefundRequest,
+  CardcomRefundResponse,
 } from "./wire-types";
 
 const CARDCOM_BASE_URL = "https://secure.cardcom.solutions";
 const CREATE_PATH = "/api/v11/LowProfile/Create";
 const GET_RESULT_PATH = "/api/v11/LowProfile/GetLpResult";
+const REFUND_PATH = "/api/v11/Transactions/RefundByTransactionId";
 
 const CARDCOM_SUCCESS_CODE = 0; // ResponseCode 0 == success across v11
 const ISO_COIN_ILS = 1; // Cardcom ISOCoinId for shekels — amounts stay in shekels (#35)
@@ -24,6 +29,8 @@ const RECEIPT_QUANTITY = 1;
 export interface CardcomConfig {
   terminalNumber: number;
   apiName: string;
+  /** Refund-only credential; absent unless refunds are configured (see ./env). */
+  apiPassword?: string | null;
   /** Override the API host (tests). Defaults to Cardcom production host. */
   baseUrl?: string;
   /** Injected for testability; defaults to the global fetch. */
@@ -39,12 +46,14 @@ export interface CardcomConfig {
 export class CardcomProvider implements PaymentProvider {
   private readonly terminalNumber: number;
   private readonly apiName: string;
+  private readonly apiPassword: string | null;
   private readonly baseUrl: string;
   private readonly fetchFn: typeof fetch;
 
   constructor(config: CardcomConfig) {
     this.terminalNumber = config.terminalNumber;
     this.apiName = config.apiName;
+    this.apiPassword = config.apiPassword ?? null;
     this.baseUrl = config.baseUrl ?? CARDCOM_BASE_URL;
     this.fetchFn = config.fetchFn ?? fetch;
   }
@@ -114,6 +123,47 @@ export class CardcomProvider implements PaymentProvider {
       providerRef: tranzactionId != null ? String(tranzactionId) : null,
       amount: result.TranzactionInfo?.Amount ?? null,
       document,
+    };
+  }
+
+  async refund(request: RefundRequest): Promise<RefundResult> {
+    if (!this.apiPassword) {
+      throw new Error(
+        "Cardcom refunds require CARDCOM_API_PASSWORD — refund credential is not configured.",
+      );
+    }
+    // Our provider_ref is Cardcom's TranzactionId serialized as text; the refund endpoint wants
+    // it back as an integer.
+    const transactionId = Number(request.providerRef);
+    if (!Number.isInteger(transactionId) || transactionId <= 0) {
+      throw new Error(
+        `Cannot refund: provider_ref "${request.providerRef}" is not a Cardcom transaction id.`,
+      );
+    }
+    if (!(request.amount > 0)) {
+      throw new Error(`Refund amount must be positive, got ${request.amount}.`);
+    }
+
+    const body: CardcomRefundRequest = {
+      ApiName: this.apiName,
+      ApiPassword: this.apiPassword,
+      TransactionId: transactionId,
+      // Always explicit: refund exactly (paid − cancellation fee) shekels.
+      PartialSum: request.amount,
+      AllowMultipleRefunds: false,
+    };
+
+    const result = await this.post<CardcomRefundResponse>(REFUND_PATH, body);
+    if (result.ResponseCode !== CARDCOM_SUCCESS_CODE) {
+      throw new Error(
+        `Cardcom RefundByTransactionId failed (ResponseCode ${result.ResponseCode}: ` +
+          `${result.Description ?? "no description"})`,
+      );
+    }
+    const refundRef = result.NewTranzactionId ?? result.TranzactionId ?? null;
+    return {
+      success: true,
+      providerRef: refundRef != null ? String(refundRef) : null,
     };
   }
 
