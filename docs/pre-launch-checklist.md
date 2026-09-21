@@ -47,6 +47,11 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   actually firing (`cron.job_run_details`) once real bookings exist._
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
+- [~] **Apply `20260921130000_close_past_departures.sql` to the cloud DBs.** Flips past `open`
+  departures to `closed` (daily pg_cron + one-time backfill), so trips that already ran stop
+  reading as open. _Applied to Preview `kama_trails_preview` (backfilled; `close-past-departures`
+  job scheduled `5 0 * * *`, pg_cron confirmed). **Still to apply to main `kama_trails`** at
+  merge/cutover, via MCP; verify the job exists after applying (`select * from cron.job;`)._
 
 ## Admin manage-actions, private trips & pay-links (DECISIONS #51/#53, issues #24/#32)
 
