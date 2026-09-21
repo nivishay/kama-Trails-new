@@ -47,11 +47,11 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   actually firing (`cron.job_run_details`) once real bookings exist._
 - [ ] End-to-end test a real payment against the **live** Cardcom terminal (not the
   sandbox terminal `1000`) before opening booking to the public.
-- [~] **Apply `20260921130000_close_past_departures.sql` to the cloud DBs.** Flips past `open`
+- [x] **Apply `20260921130000_close_past_departures.sql` to the cloud DBs.** Flips past `open`
   departures to `closed` (daily pg_cron + one-time backfill), so trips that already ran stop
-  reading as open. _Applied to Preview `kama_trails_preview` (backfilled; `close-past-departures`
-  job scheduled `5 0 * * *`, pg_cron confirmed). **Still to apply to main `kama_trails`** at
-  merge/cutover, via MCP; verify the job exists after applying (`select * from cron.job;`)._
+  reading as open. _Applied to **both** Preview `kama_trails_preview` and main `kama_trails`
+  (backfilled — 16 past departures closed in prod; `close-past-departures` job scheduled
+  `5 0 * * *`, pg_cron confirmed on both)._
 
 ## Admin manage-actions, private trips & pay-links (DECISIONS #51/#53, issues #24/#32)
 
@@ -86,10 +86,9 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 
 ### Admin cancel/refund flow (DECISIONS #13/#15/#53) — built this session
 
-- [~] **Apply `20260921120000_admin_cancel_and_refund.sql` to the cloud DBs** (adds the
-  `admin_cancel_booking` RPC). _Applied to Preview `kama_trails_preview` this session (verified: RPC
-  present, security-definer, admin-only guard fires). **Still to apply to main `kama_trails`** at
-  merge/cutover, via MCP._
+- [x] **Apply `20260921120000_admin_cancel_and_refund.sql` to the cloud DBs** (adds the
+  `admin_cancel_booking` RPC). _Applied to **both** Preview `kama_trails_preview` and main
+  `kama_trails` (verified: RPC present, security-definer, admin-only guard fires)._
 - [ ] **Set `CARDCOM_API_PASSWORD` in Vercel prod env.** The refund endpoint
   (`Transactions/RefundByTransactionId`) authenticates with ApiName + ApiPassword — unlike checkout.
   `CardcomProvider.refund` throws loudly if it's missing, so a cancel-with-refund will fail until it's
