@@ -6,7 +6,9 @@
 const TRIP_PHOTOS_BUCKET = "trip_photos";
 
 /**
- * Resolve a stored trail image reference to a loadable public URL.
+ * Resolve a stored `trip_photos` reference to a loadable public URL. Works for
+ * any media in the bucket — trail photos, and site assets such as the homepage
+ * hero video/poster under the `_site/` prefix.
  *
  * - `null` / empty            → `null` (callers render the placeholder)
  * - already-absolute (`http`) → returned unchanged (e.g. legacy base44 media)
@@ -14,10 +16,12 @@ const TRIP_PHOTOS_BUCKET = "trip_photos";
  *   from `NEXT_PUBLIC_SUPABASE_URL` so each deployment serves its own files.
  *
  * Reads `process.env.NEXT_PUBLIC_SUPABASE_URL` directly (not via the throwing
- * env module) so rendering a card in a unit test without Supabase env degrades
- * to the placeholder instead of crashing the render.
+ * env module) so rendering without Supabase env degrades to the placeholder
+ * instead of crashing the render.
  */
-export function trailImageUrl(ref: string | null | undefined): string | null {
+export function tripPhotosPublicUrl(
+  ref: string | null | undefined,
+): string | null {
   if (!ref) return null;
   const trimmed = ref.trim();
   if (trimmed === "") return null;
@@ -31,3 +35,6 @@ export function trailImageUrl(ref: string | null | undefined): string | null {
   const path = trimmed.replace(/^\/+/, "");
   return `${base}/storage/v1/object/public/${TRIP_PHOTOS_BUCKET}/${path}`;
 }
+
+/** Back-compat alias — trail images resolve through the same bucket helper. */
+export const trailImageUrl = tripPhotosPublicUrl;
