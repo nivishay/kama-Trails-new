@@ -13,7 +13,7 @@ export function PartnerLogosStrip({ logos }: { logos: PartnerLogo[] }) {
   }
 
   return (
-    <section className="border-t border-border bg-muted/30">
+    <section className="border-y border-border bg-white">
       <div className="mx-auto max-w-6xl px-4 py-16 text-center">
         <h2 className="text-2xl font-bold text-ink sm:text-3xl">
           גאים לשרת את מאות לקוחותינו
@@ -27,7 +27,7 @@ export function PartnerLogosStrip({ logos }: { logos: PartnerLogo[] }) {
                 width={160}
                 height={80}
                 unoptimized
-                className="h-14 w-auto object-contain opacity-75 transition-opacity hover:opacity-100"
+                className="h-14 w-auto object-contain"
               />
             </li>
           ))}

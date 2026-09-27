@@ -30,7 +30,7 @@ create policy "partner_logos: admin write" on public.partner_logos
 -- Seed the logos from the old site's client strip, preserving display order.
 insert into public.partner_logos (name, image_path, sort_order) values
   ('החברה להגנת הטבע',        '/logos/01-spni.png',            1),
-  ('הטכניון',                 '/logos/02-technion.png',        2),
+  ('הטכניון',                 '/logos/02-technion.svg',        2),
   ('טללים',                   '/logos/03-tlalim.png',          3),
   ('לקוח של שבילי קמה',       '/logos/04-client.png',          4),
   ('קרן קיימת לישראל',        '/logos/05-kkl.jpg',             5),
