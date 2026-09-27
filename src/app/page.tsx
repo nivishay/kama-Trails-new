@@ -4,6 +4,8 @@ import { ArrowLeft, ShieldCheck, Users, Baby, Building2 } from "lucide-react";
 import { getDeparturesForTrail, getTrails } from "@/lib/catalog";
 import { nextUpcomingDeparture } from "@/lib/catalog/availability";
 import { tripPhotosPublicUrl } from "@/lib/catalog/trail-image";
+import { SITE_HERO_VIDEO, SITE_HERO_POSTER } from "@/lib/site";
+import { COMPANY_INTRO_POINTS } from "@/lib/content/company";
 import { Button } from "@/components/ui/button";
 import { TrailCard } from "@/components/catalog/trail-card";
 import { HeroVideo } from "@/components/home/hero-video";
@@ -13,13 +15,6 @@ const AUDIENCE_FEATURES = [
   { Icon: Baby, label: "ילדים ונוער" },
   { Icon: Building2, label: "ארגונים ובתי ספר" },
 ];
-
-// Fixed homepage hero, independent of trail order. Stored as relative
-// trip_photos paths under `_site/`; resolved per-environment at render time.
-// The video (drone shots from second 36 of the source clip) plays muted on
-// loop; the poster frame is the still fallback (reduced motion / load / no env).
-const HOME_HERO_VIDEO = "_site/home-hero.mp4";
-const HOME_HERO_POSTER = "_site/home-hero-poster.jpg";
 
 function Hero({
   videoSrc,
@@ -100,8 +95,8 @@ export default async function HomePage() {
   return (
     <div>
       <Hero
-        videoSrc={tripPhotosPublicUrl(HOME_HERO_VIDEO)}
-        posterSrc={tripPhotosPublicUrl(HOME_HERO_POSTER)}
+        videoSrc={tripPhotosPublicUrl(SITE_HERO_VIDEO)}
+        posterSrc={tripPhotosPublicUrl(SITE_HERO_POSTER)}
       />
 
       <section className="border-b border-border bg-muted/40">
@@ -118,7 +113,27 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16">
+      <section className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <p className="mb-2 text-sm font-medium text-primary">קצת עלינו</p>
+        <h2 className="text-3xl font-bold text-ink">
+          נעים מאוד!! אנחנו צוות &quot;שבילי קמה&quot;
+        </h2>
+        <div className="mt-6 space-y-3 text-lg leading-relaxed text-muted-foreground">
+          {COMPANY_INTRO_POINTS.map((point) => (
+            <p key={point}>{point}</p>
+          ))}
+        </div>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Button asChild variant="primary" size="lg">
+            <Link href="/contact">צרו קשר</Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link href="/about">קרא עוד עלינו</Link>
+          </Button>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="mb-8 flex items-end justify-between">
           <div className="text-right">
             <p className="mb-1 text-sm font-medium text-primary">
