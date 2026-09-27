@@ -50,11 +50,13 @@ function Hero({
           <ShieldCheck className="size-4" />
           מוסמכים ומבוטחים · משרד התרבות והספורט
         </span>
-        <h1 className="text-5xl font-bold sm:text-6xl">שבילי קמה</h1>
-        <p className="mt-3 text-2xl font-semibold text-primary">
+        <h1 className="text-6xl font-bold tracking-tight sm:text-7xl">
+          שבילי קמה
+        </h1>
+        <p className="mt-4 text-3xl font-semibold text-primary sm:text-4xl">
           טיולי סנפלינג ואתגר
         </p>
-        <p className="mt-2 text-lg text-ink-muted">
+        <p className="mt-3 text-lg text-ink-muted sm:text-xl">
           לארגונים · בתי ספר · טיולי זוגות ומשפחות
         </p>
         <div className="mt-8 flex flex-wrap justify-end gap-3">
@@ -64,13 +66,18 @@ function Hero({
               <ArrowLeft className="size-4" />
             </Link>
           </Button>
+          {/* Private/group trips have no public catalog — the CTA opens a lead
+              request. Styled as a solid light button so it stands apart from the
+              lime "open trips" path on the dark hero. */}
           <Button
             asChild
-            variant="outline"
             size="lg"
-            className="border-ink-foreground/40 text-ink-foreground hover:bg-ink-foreground hover:text-ink"
+            className="bg-ink-foreground text-ink hover:bg-white"
           >
-            <Link href="/contact">צרו קשר</Link>
+            <Link href="/contact">
+              <Users className="size-4" />
+              להזמנת טיול פרטי
+            </Link>
           </Button>
         </div>
       </div>
@@ -105,8 +112,8 @@ export default async function HomePage() {
               key={label}
               className="flex items-center gap-3 rounded-lg bg-card p-4 shadow-sm"
             >
-              <Icon className="size-6 text-primary" />
-              <span className="font-medium text-ink">{label}</span>
+              <Icon className="size-7 text-primary" />
+              <span className="text-lg font-semibold text-ink">{label}</span>
             </div>
           ))}
         </div>
@@ -118,7 +125,7 @@ export default async function HomePage() {
             <p className="mb-1 text-sm font-medium text-primary">
               קטלוג מסלולים
             </p>
-            <h2 className="text-3xl font-bold text-ink">טיולים קרובים</h2>
+            <h2 className="text-4xl font-bold text-ink">טיולים קרובים</h2>
           </div>
           <Link
             href="/trails"
