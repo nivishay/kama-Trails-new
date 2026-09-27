@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import type { DashboardDeparture } from "@/lib/admin/dashboard";
 
 // The month calendar (design 1c). Server-rendered from the departures list; month navigation is
@@ -36,14 +36,27 @@ function monthCells(year: number, month: number): (number | null)[] {
   return cells;
 }
 
+// Chip colour by state. Order matters: cancelled wins, then private trips read as
+// their own category (they're pre-arranged, so the public recruiting signals below
+// don't apply — #59), then the occupancy signals for open registration trips (#60).
 function chipClass(departure: DashboardDeparture): string {
   if (departure.status === "cancelled") {
     return "bg-muted text-muted-foreground line-through";
   }
+  if (departure.is_private) return "bg-violet-100 text-violet-800";
   if (departure.free_spots <= 0) return "bg-ink text-ink-foreground";
   if (departure.belowMinimum) return "bg-amber-100 text-amber-800";
   return "bg-primary text-primary-foreground";
 }
+
+// Legend entries mirror chipClass so admins can read the calendar's colours.
+const LEGEND: { label: string; swatch: string; private?: boolean }[] = [
+  { label: "מקומות פנויים", swatch: "bg-primary" },
+  { label: "מתחת למינימום", swatch: "bg-amber-100 ring-1 ring-amber-300" },
+  { label: "מלא", swatch: "bg-ink" },
+  { label: "טיול פרטי", swatch: "bg-violet-100 ring-1 ring-violet-300", private: true },
+  { label: "בוטל", swatch: "bg-muted ring-1 ring-border" },
+];
 
 export function MonthCalendar({
   departures,
@@ -61,6 +74,13 @@ export function MonthCalendar({
   const isCurrentMonth =
     today.getFullYear() === year && today.getMonth() === month;
   const todayDate = today.getDate();
+  // Date-only "today" so past days (any month before this, or earlier this month)
+  // can be faded out (#61). Today itself is not past.
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
 
   const byDate = new Map<string, DashboardDeparture[]>();
   for (const departure of departures) {
@@ -117,35 +137,50 @@ export function MonthCalendar({
               const iso = isoOf(year, month, day);
               const dayDepartures = byDate.get(iso) ?? [];
               const isToday = isCurrentMonth && day === todayDate;
+              const isPast = new Date(year, month, day) < todayStart;
               return (
-                <div key={iso} className="min-h-24 bg-background p-1.5">
-                  <div
-                    className={`inline-flex size-6 items-center justify-center rounded-full text-xs font-bold ${
-                      isToday ? "bg-ink text-ink-foreground" : "text-ink"
-                    }`}
-                  >
-                    {day}
-                  </div>
-                  <div className="mt-1 space-y-1">
-                    {dayDepartures.map((departure) => (
-                      <Link
-                        key={departure.id}
-                        href={`/admin/bookings/${departure.id}` as Route}
-                        className={`block rounded px-1.5 py-1 text-[11px] leading-tight ${chipClass(departure)}`}
-                      >
-                        <span className="font-semibold">
-                          {departure.departure_time
-                            ? `${departure.departure_time} `
-                            : ""}
-                          {departure.trail_name}
-                        </span>
-                        <span className="block opacity-90">
-                          {departure.booked}/{departure.max_capacity}
-                          {departure.free_spots <= 0 ? " · מלא" : ""}
-                          {departure.belowMinimum ? " · מתחת למינימום" : ""}
-                        </span>
-                      </Link>
-                    ))}
+                <div
+                  key={iso}
+                  className={`min-h-24 p-1.5 ${isPast ? "bg-muted/40" : "bg-background"}`}
+                >
+                  {/* Past days keep their chips but fade back — they've happened (#61). */}
+                  <div className={isPast ? "opacity-60" : undefined}>
+                    <div
+                      className={`inline-flex size-6 items-center justify-center rounded-full text-xs font-bold ${
+                        isToday ? "bg-ink text-ink-foreground" : "text-ink"
+                      }`}
+                    >
+                      {day}
+                    </div>
+                    <div className="mt-1 space-y-1">
+                      {dayDepartures.map((departure) => (
+                        <Link
+                          key={departure.id}
+                          href={`/admin/bookings/${departure.id}` as Route}
+                          className={`block rounded px-1.5 py-1 text-[11px] leading-tight ${chipClass(departure)}`}
+                        >
+                          <span className="font-semibold">
+                            {departure.is_private && (
+                              <Lock className="ml-0.5 inline size-3 align-[-2px]" />
+                            )}
+                            {departure.departure_time
+                              ? `${departure.departure_time} `
+                              : ""}
+                            {departure.trail_name}
+                          </span>
+                          <span className="block opacity-90">
+                            {departure.booked}/{departure.max_capacity}
+                            {departure.is_private ? " · פרטי" : ""}
+                            {!departure.is_private && departure.free_spots <= 0
+                              ? " · מלא"
+                              : ""}
+                            {!departure.is_private && departure.belowMinimum
+                              ? " · מתחת למינימום"
+                              : ""}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );
@@ -153,6 +188,16 @@ export function MonthCalendar({
           </div>
         </div>
       </div>
+
+      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+        {LEGEND.map((entry) => (
+          <li key={entry.label} className="flex items-center gap-1.5">
+            <span className={`size-3 rounded-sm ${entry.swatch}`} />
+            {entry.private && <Lock className="size-3" />}
+            {entry.label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -6,7 +6,9 @@
  * catalog cards). Tokens are named; components never hard-code hex values.
  */
 :root {
-  --background: #ffffff;
+  /* Soft light tint rather than pure white, so plain (bg-less) sections read as
+     part of the page instead of white gaps. Cards stay #fff to pop against it. */
+  --background: #f5f7f1;
   --foreground: #14181f;
 
   --card: #ffffff;
