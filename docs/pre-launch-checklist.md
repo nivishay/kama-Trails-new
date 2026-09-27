@@ -200,6 +200,9 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 
 - [ ] URL structure mirrors the old site or a 1:1 redirect map is in place
   (`meetings_docs/scrape_old.txt`) — no lost link equity on cutover.
+  - [ ] Redirect the old Hebrew legal slugs to the new ASCII routes:
+    `/מדיניות-פרטיות/` → `/privacy`, `/נגישות/` → `/accessibility`
+    (pages added in `src/app/privacy/`, `src/app/accessibility/`).
 - [ ] `sitemap.xml` + `robots.txt` generated and correct.
 - [ ] Per-page metadata (title/description) and canonical URLs on every public route.
 - [ ] Trail images have alt text (`trail_images` + alt, DECISIONS #28).

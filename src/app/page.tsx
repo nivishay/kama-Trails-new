@@ -6,9 +6,11 @@ import { nextUpcomingDeparture } from "@/lib/catalog/availability";
 import { tripPhotosPublicUrl } from "@/lib/catalog/trail-image";
 import { SITE_HERO_VIDEO, SITE_HERO_POSTER } from "@/lib/site";
 import { COMPANY_INTRO_POINTS } from "@/lib/content/company";
+import { getPartnerLogos } from "@/lib/content/partner-logos";
 import { Button } from "@/components/ui/button";
 import { TrailCard } from "@/components/catalog/trail-card";
 import { HeroVideo } from "@/components/home/hero-video";
+import { PartnerLogosStrip } from "@/components/home/partner-logos-strip";
 
 const AUDIENCE_FEATURES = [
   { Icon: Users, label: "משפחות וקבוצות פרטיות" },
@@ -80,9 +82,10 @@ function Hero({
 }
 
 export default async function HomePage() {
-  const [trails, departures] = await Promise.all([
+  const [trails, departures, partnerLogos] = await Promise.all([
     getTrails(),
     getDeparturesForTrail(),
+    getPartnerLogos(),
   ]);
 
   const featured = trails.slice(0, 3).map((trail) => ({
@@ -154,6 +157,8 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      <PartnerLogosStrip logos={partnerLogos} />
     </div>
   );
 }

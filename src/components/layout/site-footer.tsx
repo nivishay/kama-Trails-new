@@ -64,9 +64,19 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-white/10">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-center text-xs text-ink-muted">
-          © {year} כל הזכויות שמורות ל{SITE_NAME}
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-5 text-xs text-ink-muted sm:flex-row sm:justify-between">
+          <p className="text-center">
+            © {year} כל הזכויות שמורות ל{SITE_NAME}
+          </p>
+          <nav className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-ink-foreground">
+              מדיניות פרטיות
+            </Link>
+            <Link href="/accessibility" className="hover:text-ink-foreground">
+              הצהרת נגישות
+            </Link>
+          </nav>
+        </div>
       </div>
     </footer>
   );
