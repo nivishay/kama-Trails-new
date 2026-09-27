@@ -18,11 +18,21 @@ export interface TrailCardItem {
 /** Catalog trail card: hero image + region/difficulty, then next-departure footer. */
 export function TrailCard({ trail, nextDeparture }: TrailCardItem) {
   const href = `/trails/${trail.slug}`;
-  const heroUrl = trailImageUrl(trail.hero_image);
+  // Fall back to the first gallery photo when a trail has no dedicated hero
+  // image, so the card shows a real photo instead of a grey placeholder.
+  const firstGalleryImage = trail.gallery[0] ?? null;
+  const heroUrl =
+    trailImageUrl(trail.hero_image) ??
+    (firstGalleryImage ? trailImageUrl(firstGalleryImage) : null);
 
   return (
     <article className="flex flex-col overflow-hidden rounded-xl bg-card shadow-sm transition-shadow hover:shadow-md">
-      <Link href={href} className="group relative block aspect-[4/3]">
+      {/* overflow-hidden clips the hover zoom to the frame so the image never
+          spills into the card body. */}
+      <Link
+        href={href}
+        className="group relative block aspect-[4/3] overflow-hidden"
+      >
         {heroUrl ? (
           <Image
             src={heroUrl}
@@ -34,7 +44,6 @@ export function TrailCard({ trail, nextDeparture }: TrailCardItem) {
         ) : (
           <div className="size-full bg-muted" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/25 to-transparent" />
 
         {/* Visual affordance (the whole image already links to the detail page). */}
         <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-ink/70 px-3 py-1.5 text-xs font-medium text-ink-foreground backdrop-blur-sm transition-colors group-hover:bg-ink/85">
@@ -46,7 +55,7 @@ export function TrailCard({ trail, nextDeparture }: TrailCardItem) {
           <Badge className="absolute top-3 right-3">{trail.region_label}</Badge>
         )}
 
-        <div className="absolute inset-x-0 bottom-0 p-4 text-ink-foreground">
+        <div className="absolute inset-x-0 bottom-0 p-4 text-ink-foreground [text-shadow:0_1px_6px_rgba(0,0,0,0.85)]">
           {trail.difficulty && trail.difficulty_label && (
             <div className="mb-1 flex items-center justify-end gap-1.5 text-xs">
               <span>{trail.difficulty_label}</span>

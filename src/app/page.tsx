@@ -44,8 +44,7 @@ function Hero({
           />
         )
       )}
-      <div className="absolute inset-0 z-10 bg-gradient-to-l from-ink/85 via-ink/50 to-ink/30" />
-      <div className="relative z-20 mx-auto w-full max-w-6xl px-4 text-right">
+      <div className="relative z-20 mx-auto w-full max-w-6xl px-4 text-right [text-shadow:0_2px_12px_rgba(0,0,0,0.7)]">
         <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/90 px-4 py-1.5 text-sm font-medium text-primary-foreground">
           <ShieldCheck className="size-4" />
           מוסמכים ומבוטחים · משרד התרבות והספורט
@@ -56,7 +55,7 @@ function Hero({
         <p className="mt-4 text-3xl font-semibold text-primary sm:text-4xl">
           טיולי סנפלינג ואתגר
         </p>
-        <p className="mt-3 text-lg text-ink-muted sm:text-xl">
+        <p className="mt-3 text-lg text-ink-foreground/90 sm:text-xl">
           לארגונים · בתי ספר · טיולי זוגות ומשפחות
         </p>
         <div className="mt-8 flex flex-wrap justify-end gap-3">
