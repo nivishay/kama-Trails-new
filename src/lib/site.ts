@@ -28,3 +28,8 @@ export const CONTACT = {
 } as const;
 
 export const SITE_NAME = "שבילי קמה";
+
+// Shared homepage/catalog hero media, stored under the `_site/` prefix of the
+// trip_photos bucket; resolved per-environment via `tripPhotosPublicUrl`.
+export const SITE_HERO_VIDEO = "_site/home-hero.mp4";
+export const SITE_HERO_POSTER = "_site/home-hero-poster.jpg";

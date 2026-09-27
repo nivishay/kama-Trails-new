@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getDeparturesForTrail, getTrails } from "@/lib/catalog";
 import { nextUpcomingDeparture } from "@/lib/catalog/availability";
 import type { DepartureAvailability } from "@/lib/catalog/types";
+import { tripPhotosPublicUrl } from "@/lib/catalog/trail-image";
+import { SITE_HERO_VIDEO, SITE_HERO_POSTER } from "@/lib/site";
 import { PageHero } from "@/components/layout/page-hero";
 import { CatalogGrid } from "@/components/catalog/catalog-grid";
 import type { TrailCardItem } from "@/components/catalog/trail-card";
@@ -52,7 +54,8 @@ export default async function TrailsPage() {
         eyebrow="קטלוג מסלולים"
         title="הטיולים שלנו"
         description="ניתן להצטרף לטיולים הפתוחים שלנו. היציאה לטיול מותנית במספר נרשמים; יש להירשם בעמוד הטיול ולהסדיר תשלום."
-        backgroundImage={trails[0]?.hero_image}
+        videoSrc={tripPhotosPublicUrl(SITE_HERO_VIDEO)}
+        posterSrc={tripPhotosPublicUrl(SITE_HERO_POSTER)}
       />
       <div className="mx-auto max-w-6xl px-4 py-14">
         <CatalogGrid items={items} />

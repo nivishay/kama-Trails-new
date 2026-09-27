@@ -3,29 +3,17 @@ import Link from "next/link";
 import { PageHero } from "@/components/layout/page-hero";
 import { ContentSection } from "@/components/content/content-section";
 import { Button } from "@/components/ui/button";
+import {
+  AUDIENCE_TYPES,
+  COMPANY_INTRO_POINTS,
+  WHY_CHOOSE_US,
+} from "@/lib/content/company";
 
 export const metadata: Metadata = {
   title: "אודות",
   description:
     "שבילי קמה — חברה ממעלה גמלא העוסקת בהדרכות וטיולי סנפלינג בכל רחבי הארץ, בהסמכת וינגייט ומשרד התרבות והספורט.",
 };
-
-// Copy sourced verbatim from the live site (meetings_docs/scrape_old.txt).
-const INTRO_POINTS = [
-  "אנחנו חברה ממעלה גמלא, העוסקת בהדרכות וטיולי סנפלינג בכל רחבי הארץ!",
-  "חיים סנפלינג, נושמים סנפלינג, ואוהבים מאוד להדריך וללוות טיולי סנפלינג.",
-  "מוסמכים על ידי וינגייט ומשרד התרבות והספורט. ותק של מעל 15 שנה.",
-];
-
-const WHY_CHOOSE_US = [
-  "יחס אישי והדרכה סבלנית לכל מטייל, מדריכים נבחרים בקפידה ומקצועיים.",
-  "ניסיון של שנים בהובלה וארגון טיולים ברחבי הארץ, במגוון מסגרות והיקפים.",
-  "פועלים לפי כללי בטיחות קפדניים – כל מדריך מוסמך ובעל תעודה.",
-  "ציוד בעל תו תקן בינלאומי, נבדק בקפידה.",
-  "כיסוי ביטוחי לכל פעילות, ניתן להרחיב לפעילויות פחות נפוצות. קהל יעד: חברות וארגונים (ימי כיף, גיבוש, טיולים), קבוצות גדולות/קטנות, קיטנות ובתי ספר, בר/בת מצווה, טיולי משפחות.",
-  "שילוב בין טיול אתגרי-כיפי לטיול תוכן — דגש גם על תוכן/הדרכה וגם על האתגר.",
-  "חשוב לנו שתהנו מהסנפלינג — השירות המקצועי והנעים ביותר בארץ.",
-];
 
 export default function AboutPage() {
   return (
@@ -36,17 +24,27 @@ export default function AboutPage() {
         description="אנחנו חברה ממעלה גמלא, העוסקת בהדרכות וטיולי סנפלינג בכל רחבי הארץ."
       />
 
-      <ContentSection title='נעים מאוד!! אנחנו צוות "שבילי קמה"'>
-        <ul className="space-y-3">
-          {INTRO_POINTS.map((point) => (
-            <li key={point} className="flex gap-2">
-              <span aria-hidden className="text-primary">
-                •
-              </span>
-              <span>{point}</span>
-            </li>
+      <ContentSection title='נעים מאוד!! אנחנו צוות "שבילי קמה"' centered>
+        {COMPANY_INTRO_POINTS.map((point) => (
+          <p key={point}>{point}</p>
+        ))}
+      </ContentSection>
+
+      <ContentSection title="למי סנפלינג מיועד?" centered>
+        <p>במהלך השנים צברנו ניסיון בהדרכת סנפלינג לכל הגילאים:</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {AUDIENCE_TYPES.map((audience) => (
+            <div
+              key={audience.title}
+              className="rounded-xl border border-border bg-card p-5"
+            >
+              <h3 className="font-bold text-ink">{audience.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {audience.text}
+              </p>
+            </div>
           ))}
-        </ul>
+        </div>
       </ContentSection>
 
       <ContentSection title='למה כדאי לכם לבחור "שבילי קמה"?'>
@@ -65,8 +63,8 @@ export default function AboutPage() {
         </ol>
       </ContentSection>
 
-      <ContentSection>
-        <div className="rounded-xl bg-muted/40 p-8 text-center">
+      <ContentSection centered>
+        <div className="rounded-xl bg-muted/40 p-8">
           <h2 className="text-2xl font-bold text-ink">
             להזמנות ופרטים נוספים דברו איתנו
           </h2>
