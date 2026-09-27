@@ -2,18 +2,20 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ArrowLeft, ChevronLeft } from "lucide-react";
 import {
   getDeparturesForTrail,
   getTrailBySlug,
   getTrails,
 } from "@/lib/catalog";
 import { isPastDate } from "@/lib/format/date";
+import { formatPrice } from "@/lib/format/price";
 import { DIFFICULTY_DOT_CLASS } from "@/lib/catalog/difficulty";
 import { trailImageUrl } from "@/lib/catalog/trail-image";
 import { TrailQuickFacts } from "@/components/catalog/trail-quick-facts";
 import { TrailGallery } from "@/components/catalog/trail-gallery";
 import { DepartureList } from "@/components/catalog/departure-list";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // See /trails: ISR-cache the detail page instead of rendering dynamically per
@@ -43,14 +45,30 @@ export async function generateMetadata({
   };
 }
 
-/** A titled free-text section on the detail page; renders nothing when empty. */
-function TrailSection({ title, body }: { title: string; body: string | null }) {
+/** The lead prose block (trail description); renders nothing when empty. */
+function TrailLead({ title, body }: { title: string; body: string | null }) {
   if (!body) {
     return null;
   }
   return (
     <section>
-      <h2 className="mb-2 text-xl font-bold text-ink">{title}</h2>
+      <h2 className="mb-3 text-2xl font-bold text-ink">{title}</h2>
+      <p className="text-lg leading-relaxed whitespace-pre-line text-ink/80">
+        {body}
+      </p>
+    </section>
+  );
+}
+
+/** A bordered info card for the shorter detail sections, laid out in a grid so
+ *  they fill the content width instead of stacking into a sparse tall column. */
+function TrailInfoCard({ title, body }: { title: string; body: string | null }) {
+  if (!body) {
+    return null;
+  }
+  return (
+    <section className="rounded-xl border border-border bg-card p-5">
+      <h2 className="mb-2 text-lg font-bold text-ink">{title}</h2>
       <p className="leading-relaxed whitespace-pre-line text-muted-foreground">
         {body}
       </p>
@@ -71,11 +89,17 @@ export default async function TrailDetailPage({
     (departure) => !isPastDate(departure.date),
   );
 
-  const heroUrl = trailImageUrl(trail.hero_image);
+  // Fall back to the first gallery photo when a trail has no dedicated hero
+  // image, so the header is a real photo instead of an empty gradient.
+  const firstGalleryImage = trail.gallery[0] ?? null;
+  const heroUrl =
+    trailImageUrl(trail.hero_image) ??
+    (firstGalleryImage ? trailImageUrl(firstGalleryImage) : null);
+  const hasDetails = Boolean(trail.gear || trail.audience || trail.included);
 
   return (
     <div>
-      <section className="relative flex min-h-[420px] items-end overflow-hidden text-ink-foreground">
+      <section className="relative flex min-h-[460px] items-end overflow-hidden text-ink-foreground">
         {heroUrl && (
           <Image
             src={heroUrl}
@@ -86,7 +110,7 @@ export default async function TrailDetailPage({
             priority
           />
         )}
-        <div className="absolute inset-0 z-10 bg-gradient-to-t from-ink/90 via-ink/40 to-ink/20" />
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-ink/90 via-ink/50 to-ink/20" />
         <div className="relative z-20 mx-auto w-full max-w-6xl px-4 pb-10 text-right">
           <Link
             href="/trails"
@@ -112,21 +136,49 @@ export default async function TrailDetailPage({
               </>
             )}
           </div>
-          <h1 className="text-3xl font-bold sm:text-4xl">{trail.name}</h1>
+          <h1 className="text-4xl font-bold sm:text-5xl">{trail.name}</h1>
+          {trail.excerpt && (
+            <p className="mt-3 max-w-2xl text-lg text-ink-foreground/90">
+              {trail.excerpt}
+            </p>
+          )}
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            <Button asChild variant="primary" size="lg">
+              <Link href="#dates">
+                לתאריכים זמינים
+                <ArrowLeft className="size-4" />
+              </Link>
+            </Button>
+            <span className="text-sm text-ink-muted">
+              החל מ־{formatPrice(trail.price)} לאדם
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-border bg-muted/40">
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <TrailQuickFacts trail={trail} />
         </div>
       </section>
 
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 lg:grid-cols-3">
-        <div className="space-y-8 lg:col-span-2">
-          <TrailQuickFacts trail={trail} />
-          <TrailSection title="על המסלול" body={trail.description} />
-          <TrailSection title="ציוד נדרש" body={trail.gear} />
-          <TrailSection title="רמת קושי ולמי מתאים" body={trail.audience} />
-          <TrailSection title="מה כלול במחיר" body={trail.included} />
+        <div className="space-y-10 lg:col-span-2">
+          <TrailLead title="על המסלול" body={trail.description ?? trail.excerpt} />
           <TrailGallery images={trail.gallery} trailName={trail.name} />
+          {hasDetails && (
+            <div className="grid gap-6 sm:grid-cols-2">
+              <TrailInfoCard title="ציוד נדרש" body={trail.gear} />
+              <TrailInfoCard title="רמת קושי ולמי מתאים" body={trail.audience} />
+              <TrailInfoCard title="מה כלול במחיר" body={trail.included} />
+            </div>
+          )}
         </div>
 
-        <aside className="lg:sticky lg:top-20 lg:self-start">
+        <aside
+          id="dates"
+          className="scroll-mt-24 lg:sticky lg:top-20 lg:self-start"
+        >
           <DepartureList departures={departures} />
         </aside>
       </div>
