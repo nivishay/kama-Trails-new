@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   anon,
+  admin,
   createDeparture,
   book,
   freeSpots,
@@ -80,11 +81,28 @@ describe('seat holds', () => {
 });
 
 describe('confirm flow', () => {
-  it('confirms a held booking with the correct access token and keeps the seat', async () => {
+  // confirm_registration flips held -> confirmed on a token match alone (no payment check), so it
+  // must NOT be callable by the public roles — otherwise a customer could confirm a seat for free
+  // from the browser (the access_token is exposed to them). It is service-role only; the real
+  // customer confirm path is the Cardcom webhook -> record_payment_and_confirm (see payments suite).
+  it('anon cannot call confirm_registration — the payment-bypass is closed', async () => {
     const { departure } = await createDeparture({ maxCapacity: 1 });
     const held = await book(departure.id, 1);
 
-    const confirmed = await anon.rpc('confirm_registration', {
+    const r = await anon.rpc('confirm_registration', {
+      p_id: held.data.id,
+      p_access_token: held.data.access_token,
+    });
+    expect(r.error).toBeTruthy(); // permission denied for anon
+    expect((await getBooking(held.data.id)).status).toBe('held'); // not confirmed for free
+    expect((await freeSpots(departure.id)).data).toBe(0); // still held, not an extra freed seat
+  });
+
+  it('confirms a held booking via the service-role path and keeps the seat', async () => {
+    const { departure } = await createDeparture({ maxCapacity: 1 });
+    const held = await book(departure.id, 1);
+
+    const confirmed = await admin.rpc('confirm_registration', {
       p_id: held.data.id,
       p_access_token: held.data.access_token,
     });
@@ -93,11 +111,11 @@ describe('confirm flow', () => {
     expect((await freeSpots(departure.id)).data).toBe(0); // confirmed still occupies
   });
 
-  it('rejects confirmation with a wrong access token', async () => {
+  it('rejects confirmation with a wrong access token (service-role path)', async () => {
     const { departure } = await createDeparture({ maxCapacity: 1 });
     const held = await book(departure.id, 1);
 
-    const r = await anon.rpc('confirm_registration', {
+    const r = await admin.rpc('confirm_registration', {
       p_id: held.data.id,
       p_access_token: '00000000-0000-0000-0000-000000000000',
     });
