@@ -172,6 +172,15 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   checkout consent (`src/app/checkout/checkout-form.tsx`) links "מדיניות הביטולים" to it; the
   route does not exist yet (DECISIONS #31). Also fix the stale policy blurb in
   `src/components/catalog/departure-list.tsx` to match #13.
+  - _2026-10-09 (QA sweep, live-confirmed): `GET /cancellation-policy` returns **404** on
+    production — a customer is forced to accept a policy they cannot open. Launch-blocking._
+  - **⚠️ When building it, make sure the REFUND AMOUNT is correct.** The published fee tiers on the
+    page MUST match the tiers hard-coded in `computeCancellationCharge` (`src/lib/admin/cancellation.ts`),
+    which is what actually computes `refundAmount = paid − fee` on an admin cancel
+    (`src/lib/admin/cancel-booking.ts` → `admin_record_refund`). If the page text and the code
+    diverge, a customer is refunded a different amount than the policy promises. Verify the two agree
+    (ideally derive the page copy from the same fee-tier constants) and add a test asserting a few
+    tiers return the expected refund.
 - [ ] **End-to-end payment test** once `NEXT_PUBLIC_SITE_URL` is a public URL: the webhook
   can't reach `localhost`, so the checkout→webhook→confirmed loop is only fully exercisable
   against a deployed preview.
