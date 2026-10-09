@@ -4,16 +4,28 @@ import {
   computeCancellationCharge,
   type CancellationReason,
 } from "./cancellation";
-import { getBookingCancelInfo, getBookingsForDeparture } from "./bookings";
+import { getBookingsForDeparture } from "./bookings";
 
-// Server-side orchestration for admin cancel + refund (DECISIONS #13/#15/#53/#58). The money
-// leaves Cardcom here (network), then admin_cancel_booking records the refund row and flips the
-// booking to cancelled atomically. Reused by the single-booking flow (2a) and the bulk
-// whole-departure flow (2b, always a full refund #58).
+// Server-side orchestration for admin cancel + refund (DECISIONS #13/#15/#53/#58).
+//
+// Race-safety (QA sweep 2026-10-09): the booking is transitioned to cancelled FIRST, atomically,
+// via admin_begin_cancellation under a row lock. Only the caller that actually performs the
+// transition (did_cancel=true) goes on to refund at Cardcom — so two simultaneous cancels can no
+// longer both issue a real refund. The refund is then recorded via admin_record_refund (idempotent).
+// Reused by the single-booking flow (2a) and the bulk whole-departure flow (2b, full refund #58).
 
 export interface CancelBookingResult {
   refundAmount: number;
   totalFee: number;
+}
+
+interface BeginCancellationRow {
+  did_cancel: boolean;
+  amount_paid: number;
+  charge_provider_ref: string | null;
+  departure_date: string | null;
+  participants_count: number;
+  status_before: string;
 }
 
 /** Cancel one booking, refunding paid − #13 fee (or a full refund for a company cancel #58). */
@@ -21,48 +33,56 @@ export async function cancelBookingWithRefund(
   bookingId: string,
   reason: CancellationReason,
 ): Promise<CancelBookingResult> {
-  const info = await getBookingCancelInfo(bookingId);
-  if (!info) throw new Error("ההזמנה לא נמצאה");
-  if (info.status === "cancelled") {
-    return { refundAmount: 0, totalFee: 0 }; // already cancelled — idempotent no-op
+  const supabase = await createSupabaseServerClient();
+
+  // Phase 1 — atomically claim the cancellation. Only one concurrent caller gets did_cancel=true.
+  const { data, error } = await supabase.rpc("admin_begin_cancellation", {
+    p_booking_id: bookingId,
+    p_reason: reason,
+  });
+  if (error) throw new Error(error.message);
+  const claim = (data as unknown as BeginCancellationRow[] | null)?.[0];
+  if (!claim) throw new Error("ההזמנה לא נמצאה");
+
+  // Lost the race, or already cancelled — must NOT refund (that's what prevents a double refund).
+  if (!claim.did_cancel) {
+    return { refundAmount: 0, totalFee: 0 };
   }
-  if (!info.departure_date) {
+  if (!claim.departure_date) {
     throw new Error("ליציאה של ההזמנה חסר תאריך");
   }
 
   const charge = computeCancellationCharge({
-    departureDate: info.departure_date,
-    participants: info.participants_count,
-    amountPaid: info.amountPaid,
+    departureDate: claim.departure_date,
+    participants: claim.participants_count,
+    amountPaid: claim.amount_paid,
     reason,
   });
 
-  let refundProviderRef: string | null = null;
+  // Phase 2 — only the winner refunds + records. The booking is already cancelled at this point, so
+  // a Cardcom failure surfaces loudly and the refund is completed manually (see migration note).
   if (charge.refundAmount > 0) {
-    if (!info.chargeProviderRef) {
-      // Money is owed but there is no charge transaction to refund against — refuse rather than
-      // silently cancel and strand the customer's money. The admin resolves it in Cardcom by hand.
+    if (!claim.charge_provider_ref) {
+      // Money is owed but there is no charge transaction to refund against — surface it rather than
+      // silently strand the customer's money. The admin resolves it in Cardcom by hand.
       throw new Error("לא נמצאה עסקת חיוב להחזר — יש לטפל בהחזר ידנית");
     }
     const provider = getPaymentProvider();
     const result = await provider.refund({
-      providerRef: info.chargeProviderRef,
+      providerRef: claim.charge_provider_ref,
       amount: charge.refundAmount,
     });
     if (!result.success) {
       throw new Error("ההחזר נדחה על ידי חברת הסליקה");
     }
-    refundProviderRef = result.providerRef;
+    const { error: recordError } = await supabase.rpc("admin_record_refund", {
+      p_booking_id: bookingId,
+      p_refund_amount: charge.refundAmount,
+      p_refund_provider_ref: result.providerRef,
+      p_provider: "cardcom",
+    });
+    if (recordError) throw new Error(recordError.message);
   }
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("admin_cancel_booking", {
-    p_booking_id: bookingId,
-    p_reason: reason,
-    p_refund_amount: charge.refundAmount,
-    p_refund_provider_ref: refundProviderRef,
-  });
-  if (error) throw new Error(error.message);
 
   return { refundAmount: charge.refundAmount, totalFee: charge.totalFee };
 }
