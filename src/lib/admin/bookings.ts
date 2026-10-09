@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { DepartureStatus } from "@/lib/catalog/types";
+import { payLinkForBooking } from "./pay-link";
 
 export type BookingStatus = "held" | "confirmed" | "cancelled" | "expired";
 
@@ -25,6 +26,8 @@ export interface AdminBooking {
   cancellation_reason: string | null;
   created_at: string;
   payment: BookingPayment;
+  /** The capability pay-link to send the customer — present only while the booking is `held`. */
+  payLink: string | null;
 }
 
 /** Per-departure booking rollup for the bookings index. */
@@ -36,7 +39,7 @@ export interface DepartureBookingCounts {
 
 const BOOKING_COLUMNS =
   "id, registrant_name, phone, email, participants_count, status, " +
-  "total_amount, deposit_amount, cancellation_reason, created_at";
+  "total_amount, deposit_amount, cancellation_reason, created_at, access_token";
 
 interface BookingRow {
   id: string;
@@ -49,6 +52,7 @@ interface BookingRow {
   deposit_amount: number | null;
   cancellation_reason: string | null;
   created_at: string;
+  access_token: string;
 }
 
 interface PaymentRow {
@@ -98,8 +102,11 @@ export async function getBookingsForDeparture(
   return bookings.map((booking) => {
     const payment = paymentsByBooking.get(booking.id);
     const paid = payment != null;
+    // Keep the raw access_token internal — expose only the built pay-link (held bookings only).
+    const { access_token, ...rest } = booking;
     return {
-      ...booking,
+      ...rest,
+      payLink: payLinkForBooking(booking.status, access_token),
       payment: {
         paid,
         receiptNumber: payment?.document_number ?? null,

@@ -12,6 +12,7 @@ import { BookingStatusBadge } from "../booking-status-badge";
 import { LateAddForm } from "../late-add-form";
 import { CancelBookingDialog } from "../cancel-booking-dialog";
 import { CancelDepartureButton } from "../cancel-departure-button";
+import { PayLinkCopy } from "../pay-link-copy";
 
 /** Paid state + receipt link + the "paid but not confirmed" anomaly flag (#43). */
 function PaymentCell({ payment }: { payment: BookingPayment }) {
@@ -170,19 +171,24 @@ export default async function DepartureBookingsPage({
                     {DATETIME_FORMAT.format(new Date(booking.created_at))}
                   </td>
                   <td className={CELL}>
-                    {booking.status !== "cancelled" &&
-                      booking.status !== "expired" && (
-                        <CancelBookingDialog
-                          bookingId={booking.id}
-                          departureId={id}
-                          registrantName={booking.registrant_name}
-                          participants={booking.participants_count}
-                          amountPaid={
-                            booking.payment.paid ? booking.total_amount : 0
-                          }
-                          departureDate={header.date}
-                        />
+                    <div className="flex flex-col items-start gap-2">
+                      {booking.status === "held" && booking.payLink && (
+                        <PayLinkCopy payLink={booking.payLink} />
                       )}
+                      {booking.status !== "cancelled" &&
+                        booking.status !== "expired" && (
+                          <CancelBookingDialog
+                            bookingId={booking.id}
+                            departureId={id}
+                            registrantName={booking.registrant_name}
+                            participants={booking.participants_count}
+                            amountPaid={
+                              booking.payment.paid ? booking.total_amount : 0
+                            }
+                            departureDate={header.date}
+                          />
+                        )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getSiteUrl } from "@/lib/site-url";
+import { payLinkForToken } from "./pay-link";
 
 // Shared orchestration for admin-created bookings (#32): the private-trip and late-add entry
 // points both create a held booking via admin_create_booking and hand back a pay-link the admin
@@ -14,11 +14,6 @@ export interface AdminBookingContact {
 interface HeldAdminBooking {
   id: string;
   access_token: string;
-}
-
-/** The public pay-link (a capability URL carrying the booking's access token). */
-export function payLinkForToken(accessToken: string): string {
-  return `${getSiteUrl()}/checkout/pay/${accessToken}`;
 }
 
 /** Map admin_create_booking DB errors to friendly Hebrew; keep the rest visible. */

@@ -60,21 +60,42 @@ export default async function PayLinkPage({
     );
   }
 
+  // The admin fixed the party size + price, so per-person is total ÷ participants (participants
+  // is always ≥ 1 from admin_create_booking). Shown read-only — the customer only confirms + pays.
+  const perPerson =
+    booking.participants_count > 0
+      ? Number(booking.total_amount) / booking.participants_count
+      : Number(booking.total_amount);
+
   return (
     <PayShell>
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-ink">{booking.trail_name}</h1>
+        <p className="text-xs font-semibold tracking-wide text-primary">
+          הזמנה אישית מקמה
+        </p>
+        <h1 className="mt-1 text-2xl font-bold text-ink">
+          {booking.trail_name}
+        </h1>
         {booking.trip_date && (
           <p className="mt-1 text-sm text-muted-foreground">
             {formatTrailDate(booking.trip_date)} ·{" "}
             {formatHebrewWeekday(booking.trip_date)}
           </p>
         )}
-        <p className="mt-1 text-sm text-muted-foreground">
-          {booking.participants_count} משתתפים ·{" "}
-          {formatPrice(booking.total_amount)}
-        </p>
       </div>
+
+      <dl className="mb-4 divide-y divide-border rounded-lg border border-border">
+        <SummaryRow
+          label="משתתפים"
+          value={`${booking.participants_count}`}
+        />
+        <SummaryRow label="מחיר לאדם" value={formatPrice(perPerson)} />
+      </dl>
+
+      <p className="mb-5 text-xs text-muted-foreground">
+        הפרטים נקבעו מראש עבורכם ואינם ניתנים לשינוי. יש לאשר את התנאים ולהמשיך
+        לתשלום מאובטח.
+      </p>
 
       <PayForm
         token={token}
@@ -82,6 +103,16 @@ export default async function PayLinkPage({
         total={Number(booking.deposit_amount)}
       />
     </PayShell>
+  );
+}
+
+/** One read-only line in the locked booking summary (label on the start, value on the end). */
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2.5 text-sm">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-medium text-ink">{value}</dd>
+    </div>
   );
 }
 
