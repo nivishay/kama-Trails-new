@@ -128,8 +128,17 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 ## Cardcom payment provider (DECISIONS #34–#40)
 
 - [ ] **Swap sandbox → production Cardcom credentials** in Vercel env: real terminal
-  number + API user/password (replacing test terminal `1000` / `Cardcomtest26`). Never
-  commit; verify not in the client bundle.
+  number + API user/password (replacing test terminal `1000`). Never commit; verify not in
+  the client bundle.
+  - _2026-10-09: live creds identified + verified authenticating via `LowProfile/Create`
+    (`ResponseCode 0`) from local `.env` — the **"חיבור ל-kama trail site"** API key
+    (permissions חיוב/זיכוי/ביטול) on **terminal `198493`**. `CARDCOM_API_NAME` **must include
+    the `SK-` prefix** (copying it without the prefix / truncated → `603`); terminal `1000` is
+    unusable with this key (`614`)._
+  - _Still to confirm: the Vercel **prod + preview** `CARDCOM_API_NAME` carries the `SK-`
+    prefix and `CARDCOM_TERMINAL_NUMBER=198493` (Vercel hides `secret`-visibility values, so
+    they can't be read back — verify by re-entering from the known-good local `.env`, or via a
+    preview deploy)._
 - [ ] **Confirm the auto-issued Cardcom document is a legal חשבונית מס/קבלה** (Cardcom told the
   client receipts are automatic — verify it's the tax document, not just a payment-confirmation
   email), carries business name + VAT details, and is addressed + emailed to the customer
@@ -148,8 +157,14 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] **Confirm Cardcom's hosted-page session timeout** and set the seat-hold length to
   `session + buffer` (DECISIONS #32/#39; the ~30 min default is a guess until confirmed).
 - [ ] **Set `NEXT_PUBLIC_SITE_URL`** to the live origin (`https://kamatrails.co.il`) in Vercel —
-  the checkout builds the Cardcom `SuccessRedirectUrl`/`FailedRedirectUrl`/`WebHookUrl` from it
-  (`src/lib/site-url.ts`). Defaults to `http://localhost:3000` in dev.
+  the checkout builds the Cardcom `SuccessRedirectUrl`/`FailedRedirectUrl`/`WebHookUrl` and the admin
+  pay-links from it (`src/lib/site-url.ts`). Defaults to `http://localhost:3000` in dev.
+  - _2026-10-09 (QA sweep): `getSiteUrl()` was hardened so it can **no longer silently emit a
+    localhost URL on a deployed environment** — if `NEXT_PUBLIC_SITE_URL` is unset/localhost it falls
+    back to Vercel's own origin (`VERCEL_PROJECT_PRODUCTION_URL`/`VERCEL_URL`) and throws if even that
+    is absent. This was the root cause of the "private-trip pay-link doesn't work" bug (the copied
+    link was `http://localhost:3000/...`). Setting the var is still required for the canonical origin
+    and the `kamatrails.co.il` cutover, but the link + webhook no longer break when it's merely unset._
 - [ ] **`WebHookUrl` reachable in production** (public Vercel URL) and
   `SuccessRedirectUrl`/`FailedRedirectUrl` point at the live domain. The webhook —
   verified via `GetLpResult` — is the only thing that confirms a booking (DECISIONS #37).
@@ -157,9 +172,17 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   checkout consent (`src/app/checkout/checkout-form.tsx`) links "מדיניות הביטולים" to it; the
   route does not exist yet (DECISIONS #31). Also fix the stale policy blurb in
   `src/components/catalog/departure-list.tsx` to match #13.
-- [ ] **End-to-end sandbox payment** once `NEXT_PUBLIC_SITE_URL` is a public URL: the webhook
+- [ ] **End-to-end payment test** once `NEXT_PUBLIC_SITE_URL` is a public URL: the webhook
   can't reach `localhost`, so the checkout→webhook→confirmed loop is only fully exercisable
-  against a deployed preview (test card in DECISIONS #29).
+  against a deployed preview.
+  - _2026-10-09 (RESOLVED): Cardcom's **public** test terminal works for no-charge flow testing —
+    `CARDCOM_TERMINAL_NUMBER=1000`, `CARDCOM_API_NAME=cardtest26`, `CARDCOM_API_PASSWORD=cardcom26`
+    (from support article 360002688814). Verified live against `/api/v11/LowProfile/Create`
+    (`ResponseCode 0`). Test card `4580280000000008`, exp `12/30`, CVV `123`; amounts under ₪5000
+    simulate success, over ₪5000 simulate failure. These are now the ACTIVE creds in local `.env`
+    (live 198493 creds commented out there). Earlier `614`/`603` failures were from using Kama's own
+    keys on 1000 / stale emailed creds — not needed anymore. **Prod must still swap back to the live
+    198493 terminal** (Vercel env — see the credential-swap item above)._
 - [ ] Verify webhook **idempotency** under Cardcom retries in production (the
   `UNIQUE(provider, provider_ref)` on `payments` must make a retry a no-op, DECISIONS #38).
 - [ ] **Review the verbose Cardcom response logging before launch.** `CardcomProvider.post`
@@ -221,6 +244,27 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   intended and write nothing it shouldn't.
 - [ ] No secrets in the repo or client bundle; production env vars set in the host.
 - [ ] Customer PII (name/phone/email) is stored/logged only where needed.
+- [x] **Payment-bypass hole on `confirm_registration` closed** (QA sweep 2026-10-09). The
+  SECURITY DEFINER `confirm_registration(uuid, uuid)` flipped a booking `held → confirmed` on a
+  token match alone and was granted to `anon`/`authenticated`/`PUBLIC`, so a customer could confirm
+  a seat for free from devtools. Migration `20261009120000_revoke_confirm_registration_public_grant.sql`
+  revokes it down to `service_role` (applied to prod + in repo). The real confirm path
+  (`record_payment_and_confirm`) is unaffected.
+- [x] **Bot-gate + rate-limit now fail CLOSED in production** (QA sweep 2026-10-09). `verifyTurnstile`
+  and `checkContactRateLimit` previously bypassed silently when their env (`TURNSTILE_SECRET_KEY` /
+  Upstash) was missing, in any environment. They now reject on a production deployment
+  (`isProductionDeployment()`, `src/lib/env/deployment.ts`) so a missing key surfaces as a visibly
+  broken contact form instead of an open gate. **Still must set the prod keys** (see Leads section) —
+  the fail-closed is a backstop, not a substitute.
+- [x] **Double-cancel double-refund race fixed** (QA sweep 2026-10-09). `cancel-booking.ts` used to
+  `provider.refund()` *before* flipping the row, so two near-simultaneous admin cancels both refunded
+  at Cardcom while the ledger showed one. Reworked into a two-phase flow
+  (`20261009130000_admin_cancel_atomic_claim.sql`, applied to prod + in repo): `admin_begin_cancellation`
+  transitions the booking under a row lock and only the winner (`did_cancel=true`) refunds;
+  `admin_record_refund` records it idempotently. Covered by `test/reservation/admin-cancel-atomic.integration.test.ts`
+  (incl. a concurrent-claim test). _Residual: a Cardcom refund-API failure now leaves the booking
+  cancelled-but-unrefunded (loud error → manual Cardcom refund), a deliberate trade vs. the previous
+  silent double-refund._
 
 ## Operational readiness
 
