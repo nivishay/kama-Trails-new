@@ -10,9 +10,11 @@ const MS_PER_DAY = 86_400_000;
 
 // #13 canonical tiers, keyed by whole calendar days before departure. A company/departure cancel
 // (#58) never charges a fee — everyone gets a full refund regardless of these tiers.
-const FEE_FULL_REFUND = 0; // 7+ days before (decided 2026-09-21)
-const FEE_5_TO_6_DAYS = 50; // ₪ per participant
-const FEE_3_TO_4_DAYS = 150; // ₪ per participant
+// These are the single source of truth for the fee amounts: the customer-facing
+// /cancellation-policy page quotes them, and a test asserts the page copy stays in sync (#31).
+export const FEE_FULL_REFUND = 0; // 7+ days before (decided 2026-09-21)
+export const FEE_5_TO_6_DAYS = 50; // ₪ per participant
+export const FEE_3_TO_4_DAYS = 150; // ₪ per participant
 // Within 48h → "full cost per participant, no refund": the customer forfeits everything paid.
 
 /** The computed outcome of cancelling a booking: what the company keeps and what the customer gets back. */

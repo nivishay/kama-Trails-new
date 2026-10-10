@@ -181,19 +181,24 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] **`WebHookUrl` reachable in production** (public Vercel URL) and
   `SuccessRedirectUrl`/`FailedRedirectUrl` point at the live domain. The webhook —
   verified via `GetLpResult` — is the only thing that confirms a booking (DECISIONS #37).
-- [ ] **Create the `/cancellation-policy` page** with the real #13 fee-tier content — the
+- [x] **Create the `/cancellation-policy` page** with the real #13 fee-tier content — the
   checkout consent (`src/app/checkout/checkout-form.tsx`) links "מדיניות הביטולים" to it; the
-  route does not exist yet (DECISIONS #31). Also fix the stale policy blurb in
-  `src/components/catalog/departure-list.tsx` to match #13.
-  - _2026-10-09 (QA sweep, live-confirmed): `GET /cancellation-policy` returns **404** on
-    production — a customer is forced to accept a policy they cannot open. Launch-blocking._
-  - **⚠️ When building it, make sure the REFUND AMOUNT is correct.** The published fee tiers on the
-    page MUST match the tiers hard-coded in `computeCancellationCharge` (`src/lib/admin/cancellation.ts`),
-    which is what actually computes `refundAmount = paid − fee` on an admin cancel
-    (`src/lib/admin/cancel-booking.ts` → `admin_record_refund`). If the page text and the code
-    diverge, a customer is refunded a different amount than the policy promises. Verify the two agree
-    (ideally derive the page copy from the same fee-tier constants) and add a test asserting a few
-    tiers return the expected refund.
+  route did not exist (DECISIONS #31). Stale policy blurb in
+  `src/components/catalog/departure-list.tsx` now links to the page.
+  - _2026-10-09 (QA sweep, live-confirmed): `GET /cancellation-policy` returned **404** on
+    production — a customer was forced to accept a policy they could not open. Launch-blocking._
+  - _2026-10-10 (DONE): page added (`src/app/cancellation-policy/page.tsx` rendering
+    `src/content/legal/cancellation-policy.md`, same pattern as `/privacy`). Returns **200**
+    locally. Content is a provisional client draft ("we'll change it later") — the day-of /
+    extreme-weather / minimum-registrants wording still needs the client's final text before launch._
+  - **⚠️ REFUND AMOUNT correctness — guarded.** The published fee tiers on the
+    page MUST match the tiers in `computeCancellationCharge` (`src/lib/admin/cancellation.ts`),
+    which computes `refundAmount = paid − fee` on an admin cancel
+    (`src/lib/admin/cancel-booking.ts` → `admin_record_refund`). The fee amounts are now exported
+    constants (`FEE_5_TO_6_DAYS`, `FEE_3_TO_4_DAYS`, `FEE_FULL_REFUND`) and
+    `src/content/legal/cancellation-policy.test.ts` asserts the page copy quotes them, so the two
+    cannot silently diverge. **If the client revises the fee numbers, change the constants (not just
+    the markdown) and bump `POLICY_VERSION` — see the item below.**
 - [ ] **End-to-end payment test** once `NEXT_PUBLIC_SITE_URL` is a public URL: the webhook
   can't reach `localhost`, so the checkout→webhook→confirmed loop is only fully exercisable
   against a deployed preview.

@@ -94,8 +94,11 @@ export function DepartureList({
       )}
 
       <p className="border-t border-border px-5 py-4 text-xs text-muted-foreground">
-        מדיניות ביטולים: ביטול 7+ ימים לפני הטיול — החזר מלא. לפרטים המלאים צרו
-        קשר.
+        מדיניות ביטולים: ביטול 7+ ימים לפני הטיול — החזר מלא. לפרטים המלאים ראו{" "}
+        <Link href="/cancellation-policy" className="underline">
+          מדיניות הביטולים
+        </Link>
+        .
       </p>
     </div>
   );
