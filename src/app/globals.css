@@ -59,3 +59,34 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, Arial, sans-serif;
 }
+
+/*
+ * Accessibility toolbar modes — toggled by AccessibilityWidget via classes on
+ * <html>. Keep the widget itself legible by exempting it from the page filters.
+ */
+html.a11y-grayscale {
+  filter: grayscale(100%);
+}
+html.a11y-invert {
+  filter: invert(100%) hue-rotate(180deg);
+}
+html.a11y-grayscale.a11y-invert {
+  filter: grayscale(100%) invert(100%) hue-rotate(180deg);
+}
+/* Cancel the page invert on the accessibility control so it stays legible. */
+html.a11y-invert .a11y-exempt {
+  filter: invert(100%) hue-rotate(180deg);
+}
+
+html.a11y-links a {
+  text-decoration: underline !important;
+  outline: 2px solid #ffbf47;
+  outline-offset: 2px;
+}
+
+html.a11y-readable,
+html.a11y-readable * {
+  font-family: Arial, "Segoe UI", sans-serif !important;
+  letter-spacing: 0.02em;
+  line-height: 1.7 !important;
+}

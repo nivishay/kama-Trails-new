@@ -120,6 +120,19 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
 - [ ] **Newsletter tool syncs consent both ways** — export only opted-in; an unsubscribe in the tool
   writes back opt-out (#55/#57).
 
+## Cookie consent & accessibility widget (feat/accessibility-cookie-widgets)
+
+- [ ] **Gate tracking scripts on cookie consent.** The banner
+  (`src/components/layout/cookie-consent.tsx`) today loads no analytics/marketing
+  scripts, so "לאשר הכול" and "הכרחי בלבד" currently behave the same (both just store
+  the choice in `localStorage["kama-cookie-consent"]`). When analytics/pixels are added,
+  load them only when the stored value is `accepted`, and honour "necessary only".
+- [ ] **Legal review of accessibility compliance (IS 5568 / תקנות נגישות).** The
+  self-built toolbar (`src/components/accessibility/accessibility-widget.tsx`:
+  font-size, invert, grayscale, highlight-links, readable-font) plus the existing
+  `/accessibility` statement should be reviewed to confirm it meets the required
+  standard before cutover — or swap in a certified widget if legal needs one.
+
 ## WhatsApp / automations (DECISIONS #57)
 
 - [ ] **Meta-approved WhatsApp templates** for every transactional message before launch (Niv drafts,
