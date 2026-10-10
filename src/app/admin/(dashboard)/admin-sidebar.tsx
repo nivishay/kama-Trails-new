@@ -32,7 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/bookings", label: "הזמנות", icon: ClipboardList },
   { href: "/admin/customers", label: "לקוחות", icon: Users },
   { href: "/admin/private-trips/new", label: "טיול פרטי", icon: Sparkles },
-  { href: "/admin", label: "מסלולים", icon: MapIcon, disabled: true },
+  { href: "/admin/trails", label: "מסלולים", icon: MapIcon },
   { href: "/admin/leads", label: "פניות", icon: Inbox },
 ];
 

@@ -8,3 +8,21 @@ export const DIFFICULTY_DOT_CLASS: Record<Difficulty, string> = {
   "medium-hard": "bg-orange-500",
   hard: "bg-red-500",
 };
+
+/** Default Hebrew label per difficulty (used by the admin picker and as a fallback). */
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  easy: "קל",
+  "easy-medium": "קל-בינוני",
+  medium: "בינוני",
+  "medium-hard": "בינוני-קשה",
+  hard: "קשה",
+};
+
+/** Every difficulty level in easy→hard order (admin select, validation). */
+export const DIFFICULTIES: Difficulty[] = [
+  "easy",
+  "easy-medium",
+  "medium",
+  "medium-hard",
+  "hard",
+];

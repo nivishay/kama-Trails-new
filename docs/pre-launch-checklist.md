@@ -71,6 +71,20 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   (`departure_effective_close`); when `departure_time` is absent/unparseable it falls back to end
   of the departure day. Confirm this matches Stav's expectation before launch (DECISIONS #53).
 
+## Admin trail editor & image uploads (`/admin/trails`)
+
+- [ ] **Apply `20261010130000_trip_photos_admin_write.sql` to the Preview cloud DB
+  (`kama_trails_preview`).** It adds admin INSERT/UPDATE/DELETE RLS policies on the
+  `trip_photos` storage bucket so the trail editor's image uploader works (public
+  read already existed; `public.is_admin()` gates writes). _Applied this session to
+  **main `kama_trails`** via MCP; Preview still needs it or uploads will 403 there._
+- [ ] **Orphaned storage files are not cleaned up.** Removing a hero/gallery image in
+  the editor, replacing the hero, or deleting a trail only drops the DB reference —
+  the underlying object stays in the `trip_photos` bucket
+  (`src/app/admin/(dashboard)/trails/trail-image-fields.tsx`, `deleteTrail` in
+  `actions.ts`). Harmless (public-read only, small files) but will accumulate; add a
+  cleanup pass (or delete-on-remove) if storage bloat matters before/after launch.
+
 ## ~~Tokenization payment model (ADR 0004 / DECISIONS #46–#52)~~ — SUPERSEDED (2026-08-19)
 
 > **Superseded by DECISIONS #58 — reverted to pay-immediately at checkout.** The tokenize-then-charge-later
@@ -99,6 +113,18 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   field so the refund's `provider_ref` is recorded, and adjust if Cardcom uses another name.
 - [ ] **End-to-end sandbox refund** once a preview with real sandbox creds exists: cancel a paid
   booking and confirm Cardcom returns the money + a `kind='refund'` row lands in `payments`.
+  - _2026-10-10 (live test): the webhook→confirm loop now works end-to-end (fixed by setting
+    `NEXT_PUBLIC_SITE_URL` explicitly so Cardcom's `WebHookUrl`/`SuccessRedirectUrl` land on the
+    same deployment+DB the customer booked on — previously it fell back to the prod alias on
+    preview, `src/lib/site-url.ts:36`). **But the cancel-with-refund failed on sandbox terminal
+    `1000` with `ResponseCode 671 "אין הרשאת API לביצוע ביטול עסקה"`** — the `cardtest26` sandbox
+    key is charge-only and has no refund/cancel API permission. This is a **sandbox limitation, not
+    a code bug** (the request authenticated and reached Cardcom; `CARDCOM_API_PASSWORD` is set).
+    Refunds can therefore **only** be verified on terminal `198493`, whose key is documented to
+    carry זיכוי/ביטול permission (see the credential item under "Cardcom payment provider"). **Before
+    launch: run a real book→confirm→cancel-with-refund on `198493` in test mode and confirm a
+    `kind='refund'` row lands + money returns.** If 671 recurs on 198493, Cardcom must enable the
+    refund/cancel API permission for Kama's API user._
 - [ ] **Partial-cancel (design 2c) deferred** — dropping *some* participants from a booking is not in
   the decided action set (#53); revisit only if Stav needs it. Tracked in `docs/admin-redesign-plan.md`.
 
@@ -253,6 +279,29 @@ Status legend: `[ ]` open · `[x]` done · `[~]` in progress / partial.
   - [ ] Redirect the old Hebrew legal slugs to the new ASCII routes:
     `/מדיניות-פרטיות/` → `/privacy`, `/נגישות/` → `/accessibility`
     (pages added in `src/app/privacy/`, `src/app/accessibility/`).
+  - [ ] **Redirect every old trail URL to its new `/trails/<slug>` route.** All 15
+    old-site trails now exist as `trails` rows (migration
+    `supabase/migrations/20261010120000_seed_remaining_old_site_trails.sql`); the
+    new ASCII slugs differ from the old Hebrew URLs, so each needs a 1:1 redirect:
+    - `/מצוק-דלתון/` → `/trails/mitzpe-dalton`
+    - `/מערת-קשת/` → `/trails/keshet-cave`
+    - `/סנפלינג-וטיפוס-במחצבות-קדומים/` → `/trails/kedumim-quarry`
+    - `/נחל-רחף/` → `/trails/nahal-rachaf`
+    - `/נחל-קומראן/` → `/trails/nahal-qumran`
+    - `/נחל-טור/` → `/trails/nahal-tur`
+    - `/סנפלינג-טיפוס-וויה-פרטה-ברכס-רמים/` → `/trails/via-ferrata-ramim`
+    - `/ויה-פרטה-רביד-שבילי-קמה/` → `/trails/via-ferrata-ravid`
+    - `/טיול-סנפלינג-רטוב-בנחל-גילבון-גלישת-צו/` → `/trails/nahal-gilbon`
+    - `/נחל-תמרים-סנפלינג-בדרום/` → `/trails/nahal-tmarim`
+    - `/מצוק-נחל-משאש/` → `/trails/mishash-cliff`
+    - `/סנפלינג-במצוק-גפת-בגלבוע/` → `/trails/gefet-cliff-gilboa`
+    - `/מצוק-שילת/` → `/trails/shilat-cliff`
+    - `/סנפלינג-במצוק-זנוח-טיפוס/` → `/trails/zanoah-cliff`
+    - `/טיול-סנפלינג-רטוב-בנקיק-השחור-זויתן-2/` → `/trails/nakik-shachor`
+  - [ ] **Replace the 10 new trails' placeholder price (`180`) with the real price**
+    per trail before launch (set in the admin "מסלולים" editor, `/admin/trails`).
+    The booking charge comes from each departure's own price, but the catalog
+    default should still be correct.
 - [ ] `sitemap.xml` + `robots.txt` generated and correct.
 - [ ] Per-page metadata (title/description) and canonical URLs on every public route.
 - [ ] Trail images have alt text (`trail_images` + alt, DECISIONS #28).
