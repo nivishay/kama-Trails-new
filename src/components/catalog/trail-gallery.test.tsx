@@ -24,37 +24,25 @@ describe("TrailGallery", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = originalEnv;
   });
 
-  it("renders a thumbnail button per image and no lightbox initially", () => {
+  it("starts on the first photo with a thumbnail per image", () => {
     render(<TrailGallery images={IMAGES} trailName="מסלול" />);
 
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
     expect(
-      screen.getAllByRole("button", { name: /הצגת תמונה/ }),
+      screen.getAllByRole("button", { name: /מעבר לתמונה/ }),
     ).toHaveLength(3);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("opens the lightbox on the clicked image", async () => {
-    const user = userEvent.setup();
-    render(<TrailGallery images={IMAGES} trailName="מסלול" />);
-
-    await user.click(
-      screen.getByRole("button", { name: "הצגת תמונה 2 מתוך 3" }),
-    );
-
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("2 / 3")).toBeInTheDocument();
   });
 
   it("advances and wraps around with the next control", async () => {
     const user = userEvent.setup();
     render(<TrailGallery images={IMAGES} trailName="מסלול" />);
 
-    await user.click(
-      screen.getByRole("button", { name: "הצגת תמונה 3 מתוך 3" }),
-    );
-    expect(screen.getByText("3 / 3")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "התמונה הבאה" }));
+    const next = screen.getByRole("button", { name: "התמונה הבאה" });
+    await user.click(next);
+    expect(screen.getByText("2 / 3")).toBeInTheDocument();
+    await user.click(next);
+    await user.click(next);
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
   });
 
@@ -62,20 +50,26 @@ describe("TrailGallery", () => {
     const user = userEvent.setup();
     render(<TrailGallery images={IMAGES} trailName="מסלול" />);
 
-    await user.click(
-      screen.getByRole("button", { name: "הצגת תמונה 1 מתוך 3" }),
-    );
     await user.click(screen.getByRole("button", { name: "התמונה הקודמת" }));
-
     expect(screen.getByText("3 / 3")).toBeInTheDocument();
   });
 
-  it("closes the lightbox on Escape", async () => {
+  it("jumps to the photo chosen from the thumbnail strip", async () => {
     const user = userEvent.setup();
     render(<TrailGallery images={IMAGES} trailName="מסלול" />);
 
     await user.click(
-      screen.getByRole("button", { name: "הצגת תמונה 1 מתוך 3" }),
+      screen.getByRole("button", { name: "מעבר לתמונה 3 מתוך 3" }),
+    );
+    expect(screen.getByText("3 / 3")).toBeInTheDocument();
+  });
+
+  it("opens the lightbox on the current photo and closes on Escape", async () => {
+    const user = userEvent.setup();
+    render(<TrailGallery images={IMAGES} trailName="מסלול" />);
+
+    await user.click(
+      screen.getByRole("button", { name: "הגדלת תמונה 1 מתוך 3" }),
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 

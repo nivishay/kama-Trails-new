@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Clock } from "lucide-react";
 import type { DepartureAvailability, Trail } from "@/lib/catalog/types";
+import { isBookable } from "@/lib/catalog/availability";
 import { DIFFICULTY_DOT_CLASS } from "@/lib/catalog/difficulty";
 import { trailImageUrl } from "@/lib/catalog/trail-image";
 import { formatTrailDate, formatHebrewWeekday } from "@/lib/format/date";
@@ -92,13 +93,23 @@ export function TrailCard({ trail, nextDeparture }: TrailCardItem) {
         )}
 
         <div className="mt-auto flex items-center justify-between">
-          {/* Registration lands in the booking increment; disabled for now. */}
-          <Button variant="primary" size="sm" disabled title="בקרוב">
-            <Calendar className="size-4" />
-            {nextDeparture
-              ? `הרשמה ל-${formatTrailDate(nextDeparture.date)}`
-              : "בקרוב"}
-          </Button>
+          {/* When the next date is bookable, go straight to checkout; otherwise
+              send to the trail's dates section so the CTA is always clickable. */}
+          {nextDeparture && isBookable(nextDeparture) ? (
+            <Button variant="primary" size="sm" asChild>
+              <Link href={`/checkout?departure=${nextDeparture.id}`}>
+                <Calendar className="size-4" />
+                {`הרשמה ל-${formatTrailDate(nextDeparture.date)}`}
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="primary" size="sm" asChild>
+              <Link href={`${href}#dates`}>
+                <Calendar className="size-4" />
+                {nextDeparture ? "לתאריכים זמינים" : "בקרוב"}
+              </Link>
+            </Button>
+          )}
           <div className="text-right">
             <div className="text-xs text-muted-foreground">מחיר לאדם</div>
             <div className="font-bold text-ink">
